@@ -209,5 +209,6 @@ synapse/
 ---
 
 ## License
-
-[MIT](LICENSE)
+Copyright (c) 2026 Muhammad Indra Kusuma. All rights reserved.                                              
+                                                                                                
+Source code is made available for viewing and evaluation purposes (hackathon judging) only. No use, copying or modification is permitted without explicit written permission from the author.
