@@ -46,6 +46,7 @@ async def store_knowledge(req: StoreKnowledgeRequest):
         source=req.source,
         agent_id=req.agent_id,
         hash=content_hash,
+        namespace=req.namespace,
     )
 
     await persist_knowledge(entry)
@@ -70,7 +71,7 @@ async def query_knowledge(req: QueryKnowledgeRequest):
 
     query_embedding = generate_embedding(req.query)
     store = get_store()
-    hits  = store.search(query_embedding, top_k=req.top_k)
+    hits  = store.search(query_embedding, top_k=req.top_k, namespace=req.namespace)
 
     results: list[QueryResult] = [
         entry.to_query_result(score) for entry, score in hits
@@ -104,6 +105,22 @@ async def get_stats():
     }
 
 
+@router.get("/namespaces")
+async def list_namespaces():
+    """
+    Return all distinct namespaces currently stored in the network.
+    None entries are labelled as 'global'.
+    Used by frontends to let agents discover available knowledge domains.
+    """
+    store   = get_store()
+    entries = store.get_all()
+    namespaces = sorted({e.namespace for e in entries if e.namespace})
+    return {
+        "namespaces": namespaces,
+        "global_entries": sum(1 for e in entries if e.namespace is None),
+    }
+
+
 @router.get("", response_model=list[dict])
 async def list_knowledge():
     """
@@ -122,6 +139,7 @@ async def list_knowledge():
             "hash":             e.hash,
             "cid":              e.cid,
             "on_chain":         e.on_chain,
+            "namespace":        e.namespace,
         }
         for e in entries
     ]

@@ -17,6 +17,7 @@ API_URL  = "http://localhost:8000"
 AGENT_ID = "agent_alpha_coding_v1"
 
 KNOWLEDGE_ENTRIES = [
+    # --- engineering namespace ---
     {
         "content": (
             "Bug fix: Race condition in async transaction nonce manager. "
@@ -26,6 +27,7 @@ KNOWLEDGE_ENTRIES = [
         ),
         "source": "agent://coding-agent-alpha/v1",
         "tag": "blockchain-bug-fix",
+        "namespace": "engineering",
     },
     {
         "content": (
@@ -36,6 +38,7 @@ KNOWLEDGE_ENTRIES = [
         ),
         "source": "agent://coding-agent-alpha/v1",
         "tag": "ml-optimization",
+        "namespace": "engineering",
     },
     {
         "content": (
@@ -46,6 +49,30 @@ KNOWLEDGE_ENTRIES = [
         ),
         "source": "agent://coding-agent-alpha/v1",
         "tag": "0g-chain-tip",
+        "namespace": "engineering",
+    },
+    # --- medical namespace ---
+    {
+        "content": (
+            "Clinical insight: Elevated troponin levels (>0.04 ng/mL) combined with ST-segment "
+            "elevation on ECG are strong indicators of acute myocardial infarction (AMI). "
+            "Immediate intervention: administer aspirin 300mg, arrange urgent PCI within 90 minutes. "
+            "Do not delay reperfusion therapy pending additional lab results."
+        ),
+        "source": "agent://medical-agent-alpha/v1",
+        "tag": "cardiology",
+        "namespace": "medical",
+    },
+    {
+        "content": (
+            "Drug interaction alert: combining SSRIs with MAOIs can cause serotonin syndrome — "
+            "a life-threatening condition. Symptoms: hyperthermia, agitation, myoclonus, hyperreflexia. "
+            "Minimum washout period: 14 days after stopping MAOI before initiating SSRI. "
+            "Always cross-check patient medication list before prescribing."
+        ),
+        "source": "agent://medical-agent-alpha/v1",
+        "tag": "pharmacology",
+        "namespace": "medical",
     },
 ]
 
@@ -78,16 +105,22 @@ def run():
     stored = []
 
     for i, entry in enumerate(KNOWLEDGE_ENTRIES, 1):
-        tag     = entry["tag"]
-        content = entry["content"]
-        print(f"  [{i}/{len(KNOWLEDGE_ENTRIES)}] Storing [{tag}]")
+        tag       = entry["tag"]
+        content   = entry["content"]
+        namespace = entry.get("namespace") or "global"
+        print(f"  [{i}/{len(KNOWLEDGE_ENTRIES)}] Storing [{tag}]  namespace={namespace}")
         print(f"  {'─' * 50}")
         print(f"  {content[:90]}…\n")
 
         try:
             resp = httpx.post(
                 f"{API_URL}/knowledge",
-                json={"agent_id": AGENT_ID, "content": content, "source": entry["source"]},
+                json={
+                    "agent_id":  AGENT_ID,
+                    "content":   content,
+                    "source":    entry["source"],
+                    "namespace": entry.get("namespace"),
+                },
                 timeout=15.0,
             )
             resp.raise_for_status()
