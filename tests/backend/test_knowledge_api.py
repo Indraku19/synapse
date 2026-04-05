@@ -191,3 +191,129 @@ class TestListKnowledge:
         })
         entry = client.get("/knowledge").json()[0]
         assert "embedding" not in entry
+
+    def test_list_includes_namespace_field(self):
+        client.post("/knowledge", json={
+            "agent_id":  "agent_x",
+            "content":   "Medical knowledge entry",
+            "source":    "src",
+            "namespace": "medical",
+        })
+        entry = client.get("/knowledge").json()[0]
+        assert "namespace" in entry
+        assert entry["namespace"] == "medical"
+
+
+# ---------------------------------------------------------------------------
+# Namespace — store & query isolation
+# ---------------------------------------------------------------------------
+
+class TestNamespace:
+    def _store(self, content: str, namespace: str | None = None):
+        client.post("/knowledge", json={
+            "agent_id":  "ns_agent",
+            "content":   content,
+            "source":    "agent://ns-test/v1",
+            "namespace": namespace,
+        })
+
+    def test_store_with_namespace_returns_201(self):
+        res = client.post("/knowledge", json={
+            "agent_id":  "ns_agent",
+            "content":   "Namespace test content",
+            "source":    "src",
+            "namespace": "engineering",
+        })
+        assert res.status_code == 201
+
+    def test_store_without_namespace_defaults_to_global(self):
+        client.post("/knowledge", json={
+            "agent_id": "ns_agent",
+            "content":  "Global pool content",
+            "source":   "src",
+        })
+        entry = client.get("/knowledge").json()[0]
+        assert entry["namespace"] is None
+
+    def test_query_namespace_isolates_results(self):
+        """Querying 'medical' must not return 'engineering' entries."""
+        self._store("cardiac arrest treatment protocol", namespace="medical")
+        self._store("async race condition nonce fix",    namespace="engineering")
+
+        res = client.post("/knowledge/query", json={
+            "query":     "cardiac arrest",
+            "top_k":     5,
+            "namespace": "medical",
+        })
+        results = res.json()["results"]
+        assert len(results) >= 1
+        for r in results:
+            assert r["namespace"] == "medical"
+
+    def test_query_namespace_returns_empty_when_no_match(self):
+        """Querying a namespace with no entries returns empty list."""
+        self._store("some engineering knowledge", namespace="engineering")
+
+        res = client.post("/knowledge/query", json={
+            "query":     "some engineering knowledge",
+            "top_k":     5,
+            "namespace": "medical",
+        })
+        assert res.json()["results"] == []
+
+    def test_query_global_returns_all_namespaces(self):
+        """Query without namespace searches across all entries."""
+        self._store("medical entry", namespace="medical")
+        self._store("engineering entry", namespace="engineering")
+
+        res = client.post("/knowledge/query", json={
+            "query":  "entry",
+            "top_k":  10,
+        })
+        results = res.json()["results"]
+        assert len(results) == 2
+
+    def test_query_result_includes_namespace_field(self):
+        self._store("namespace field check", namespace="legal")
+        res = client.post("/knowledge/query", json={
+            "query": "namespace field", "top_k": 1, "namespace": "legal"
+        })
+        result = res.json()["results"][0]
+        assert "namespace" in result
+        assert result["namespace"] == "legal"
+
+
+# ---------------------------------------------------------------------------
+# GET /knowledge/namespaces
+# ---------------------------------------------------------------------------
+
+class TestListNamespaces:
+    def test_namespaces_empty(self):
+        res = client.get("/knowledge/namespaces")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["namespaces"] == []
+        assert data["global_entries"] == 0
+
+    def test_namespaces_lists_stored_domains(self):
+        for ns in ("medical", "legal", "engineering"):
+            client.post("/knowledge", json={
+                "agent_id":  "ns_agent",
+                "content":   f"{ns} knowledge entry",
+                "source":    "src",
+                "namespace": ns,
+            })
+        data = client.get("/knowledge/namespaces").json()
+        assert sorted(data["namespaces"]) == ["engineering", "legal", "medical"]
+
+    def test_namespaces_global_entries_counted_separately(self):
+        client.post("/knowledge", json={
+            "agent_id": "ns_agent", "content": "global entry", "source": "src"
+        })
+        client.post("/knowledge", json={
+            "agent_id": "ns_agent", "content": "medical entry",
+            "source": "src", "namespace": "medical"
+        })
+        data = client.get("/knowledge/namespaces").json()
+        assert data["global_entries"] == 1
+        assert "medical" in data["namespaces"]

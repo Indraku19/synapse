@@ -91,7 +91,49 @@ cd backend && python -m app.demo.agent_a
 cd backend && python -m app.demo.agent_b
 ```
 
-Agent A stores 3 knowledge entries (e.g. a bug fix). Agent B queries the network and gets back ranked results with match scores — without having been told what Agent A stored.
+Agent A stores knowledge into `engineering` and `medical` namespaces. Agent B queries each namespace separately — demonstrating that the same agent gets different knowledge depending on the role it is acting as, with zero context pollution between domains.
+
+---
+
+## Namespace — Context Isolation
+
+Synapse supports **knowledge namespaces**: isolated domains that let a single agent switch roles without mixing knowledge from unrelated fields.
+
+```
+Agent (one instance)
+  ├── query(namespace="medical")    → cardiac protocols, drug interactions
+  ├── query(namespace="legal")      → case law, contract terms
+  └── query(namespace="engineering") → bug fixes, optimization tips
+```
+
+When an agent queries a namespace, **only that domain's knowledge is returned** — the agent's context window stays clean and focused, making it a better specialist.
+
+Omitting `namespace` searches the global pool across all domains (original behaviour, fully preserved).
+
+### Store with namespace
+```bash
+curl -X POST http://localhost:8000/knowledge \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "my_agent",
+    "content": "Elevated troponin indicates acute myocardial infarction.",
+    "source": "agent://medical-agent/v1",
+    "namespace": "medical"
+  }'
+```
+
+### Query with namespace isolation
+```bash
+curl -X POST http://localhost:8000/knowledge/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "cardiac diagnosis", "top_k": 5, "namespace": "medical"}'
+```
+
+### List available namespaces
+```bash
+curl http://localhost:8000/knowledge/namespaces
+# → { "namespaces": ["engineering", "legal", "medical"], "global_entries": 2 }
+```
 
 ---
 
@@ -99,9 +141,10 @@ Agent A stores 3 knowledge entries (e.g. a bug fix). Agent B queries the network
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/knowledge` | Store a knowledge entry |
-| `POST` | `/knowledge/query` | Semantic search over stored knowledge |
+| `POST` | `/knowledge` | Store a knowledge entry (optional `namespace`) |
+| `POST` | `/knowledge/query` | Semantic search — optionally scoped to a namespace |
 | `GET` | `/knowledge` | List all entries |
+| `GET` | `/knowledge/namespaces` | List all active namespaces |
 | `GET` | `/knowledge/stats` | Network statistics |
 | `POST` | `/agents` | Register an agent |
 | `GET` | `/agents` | List agents |
@@ -157,9 +200,9 @@ After deploying, set `ZG_KNOWLEDGE_REGISTRY_ADDRESS` in `backend/.env`.
 
 ```bash
 cd backend
-pytest ../tests/backend/ -v                        # all tests (51 total)
-pytest ../tests/backend/test_services.py -v        # unit tests (25)
-pytest ../tests/backend/test_knowledge_api.py -v   # API integration (22)
+pytest ../tests/backend/ -v                        # all tests (68 total)
+pytest ../tests/backend/test_services.py -v        # unit tests (28)
+pytest ../tests/backend/test_knowledge_api.py -v   # API integration (36)
 pytest ../tests/backend/test_zg_storage.py -v      # 0G storage mock (4)
 ```
 

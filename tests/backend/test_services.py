@@ -123,6 +123,39 @@ class TestVectorStore:
         store = VectorStore()
         assert store.get_by_id("nonexistent-id") is None
 
+    def test_search_namespace_isolates_results(self):
+        """Entries from other namespaces must not appear in namespaced search."""
+        store = VectorStore()
+        med = self._make_entry("cardiac diagnosis protocol")
+        med.namespace = "medical"
+        eng = self._make_entry("async nonce race condition")
+        eng.namespace = "engineering"
+        store.add(med)
+        store.add(eng)
+
+        results = store.search(_mock_embedding("cardiac"), top_k=5, namespace="medical")
+        assert len(results) == 1
+        assert results[0][0].namespace == "medical"
+
+    def test_search_namespace_empty_when_no_match(self):
+        store = VectorStore()
+        entry = self._make_entry("engineering content")
+        entry.namespace = "engineering"
+        store.add(entry)
+
+        results = store.search(_mock_embedding("engineering content"), top_k=5, namespace="medical")
+        assert results == []
+
+    def test_search_global_returns_all_namespaces(self):
+        store = VectorStore()
+        for ns in ("medical", "engineering", None):
+            e = self._make_entry(f"content for {ns}")
+            e.namespace = ns
+            store.add(e)
+
+        results = store.search(_mock_embedding("content"), top_k=10)
+        assert len(results) == 3
+
 
 def _mock_embedding(text: str) -> list[float]:
     from app.services.embedding import _mock_embedding as _me
