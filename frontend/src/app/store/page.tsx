@@ -5,12 +5,15 @@ import { storeKnowledge } from "@/lib/api";
 import type { StoreKnowledgeResponse } from "@/lib/types";
 
 export default function StorePage() {
-  const [agentId, setAgentId]   = useState("");
-  const [content, setContent]   = useState("");
-  const [source, setSource]     = useState("");
-  const [loading, setLoading]   = useState(false);
-  const [result, setResult]     = useState<StoreKnowledgeResponse | null>(null);
-  const [error, setError]       = useState<string | null>(null);
+  const [agentId, setAgentId]       = useState("");
+  const [content, setContent]       = useState("");
+  const [source, setSource]         = useState("");
+  const [namespace, setNamespace]   = useState("");
+  const [loading, setLoading]       = useState(false);
+  const [result, setResult]         = useState<StoreKnowledgeResponse | null>(null);
+  const [error, setError]           = useState<string | null>(null);
+
+  const NS_SUGGESTIONS = ["engineering", "medical", "legal", "finance", "research"];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +22,12 @@ export default function StorePage() {
     setError(null);
 
     try {
-      const res = await storeKnowledge({ agent_id: agentId, content, source });
+      const res = await storeKnowledge({
+        agent_id: agentId,
+        content,
+        source,
+        namespace: namespace.trim() || null,
+      });
       setResult(res);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -34,6 +42,7 @@ export default function StorePage() {
     setAgentId("");
     setContent("");
     setSource("");
+    setNamespace("");
   };
 
   return (
@@ -86,6 +95,39 @@ export default function StorePage() {
             />
             <span className="mono text-xs text-text-muted">
               URI identifying the origin agent or system
+            </span>
+          </div>
+
+          {/* Namespace */}
+          <div className="flex flex-col gap-1.5">
+            <label className="mono text-xs text-text-muted uppercase">
+              Namespace <span className="normal-case text-steel">(optional)</span>
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. medical, legal, engineering — leave empty for global pool"
+              value={namespace}
+              onChange={(e) => setNamespace(e.target.value)}
+              className="input-cyber mono text-sm px-3 py-2 w-full"
+            />
+            <div className="flex flex-wrap gap-1.5 mt-0.5">
+              {NS_SUGGESTIONS.map((ns) => (
+                <button
+                  key={ns}
+                  type="button"
+                  onClick={() => setNamespace(ns === namespace ? "" : ns)}
+                  className={`mono text-xs px-2 py-0.5 rounded border transition-colors ${
+                    namespace === ns
+                      ? "border-cyan text-cyan bg-cyan/10"
+                      : "border-steel text-text-muted hover:border-cyan hover:text-cyan"
+                  }`}
+                >
+                  {ns}
+                </button>
+              ))}
+            </div>
+            <span className="mono text-xs text-text-muted">
+              Agents querying this namespace will only see knowledge from this domain
             </span>
           </div>
 
@@ -174,6 +216,7 @@ export default function StorePage() {
                 ? content.slice(0, 60) + (content.length > 60 ? "…" : "")
                 : "<content>",
               source: source || "<source>",
+              namespace: namespace.trim() || null,
             },
             null,
             2

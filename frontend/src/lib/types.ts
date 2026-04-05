@@ -10,12 +10,14 @@ export interface KnowledgeEntry {
   hash: string;
   cid?: string | null;        // 0G Storage content identifier
   on_chain?: boolean;         // true when hash is verified on 0G Chain
+  namespace?: string | null;  // knowledge domain (e.g. "medical", "legal"); null = global pool
 }
 
 export interface StoreKnowledgeRequest {
   agent_id: string;
   content: string;
   source: string;
+  namespace?: string | null;
 }
 
 export interface StoreKnowledgeResponse {
@@ -29,6 +31,7 @@ export interface StoreKnowledgeResponse {
 export interface QueryKnowledgeRequest {
   query: string;
   top_k: number;
+  namespace?: string | null;  // null = search global pool (all namespaces)
 }
 
 export interface QueryResult {
@@ -38,6 +41,12 @@ export interface QueryResult {
   agent_id: string;
   confidence_score: number;
   timestamp: string;
+  namespace?: string | null;
+}
+
+export interface NamespacesResponse {
+  namespaces: string[];
+  global_entries: number;
 }
 
 export interface QueryKnowledgeResponse {

@@ -6,10 +6,11 @@ import { KnowledgeCard } from "@/components/KnowledgeCard";
 import type { KnowledgeEntry } from "@/lib/types";
 
 export default function ExplorerPage() {
-  const [entries, setEntries]   = useState<KnowledgeEntry[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState<string | null>(null);
-  const [filter, setFilter]     = useState("");
+  const [entries, setEntries]         = useState<KnowledgeEntry[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
+  const [filter, setFilter]           = useState("");
+  const [nsFilter, setNsFilter]       = useState<string | null>(null);
 
   useEffect(() => {
     listKnowledge()
@@ -18,14 +19,17 @@ export default function ExplorerPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = filter
-    ? entries.filter(
-        (e) =>
-          e.content.toLowerCase().includes(filter.toLowerCase()) ||
-          e.agent_id.toLowerCase().includes(filter.toLowerCase()) ||
-          e.source.toLowerCase().includes(filter.toLowerCase())
-      )
-    : entries;
+  const allNamespaces = [...new Set(entries.map((e) => e.namespace).filter(Boolean))] as string[];
+
+  const filtered = entries.filter((e) => {
+    const matchText =
+      !filter ||
+      e.content.toLowerCase().includes(filter.toLowerCase()) ||
+      e.agent_id.toLowerCase().includes(filter.toLowerCase()) ||
+      e.source.toLowerCase().includes(filter.toLowerCase());
+    const matchNs = nsFilter === null || e.namespace === nsFilter;
+    return matchText && matchNs;
+  });
 
   return (
     <div className="flex flex-col gap-8">
@@ -51,30 +55,52 @@ export default function ExplorerPage() {
             value={new Set(entries.map((e) => e.agent_id)).size.toString()}
           />
           <StatCard
-            label="Avg Confidence"
-            value={
-              entries.length
-                ? (
-                    (entries.reduce((s, e) => s + e.confidence_score, 0) /
-                      entries.length) *
-                    100
-                  ).toFixed(0) + "%"
-                : "—"
-            }
+            label="Namespaces"
+            value={allNamespaces.length > 0 ? allNamespaces.length.toString() : "—"}
           />
           <StatCard label="Network Status" value="ONLINE" highlight />
         </div>
       )}
 
-      {/* Filter */}
+      {/* Filters */}
       {!loading && !error && (
-        <input
-          type="text"
-          placeholder="Filter by content, agent, or source…"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="input-cyber text-sm px-3 py-2.5 w-full max-w-md"
-        />
+        <div className="flex flex-col gap-3">
+          <input
+            type="text"
+            placeholder="Filter by content, agent, or source…"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="input-cyber text-sm px-3 py-2.5 w-full max-w-md"
+          />
+          {allNamespaces.length > 0 && (
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="mono text-xs text-text-muted">Namespace:</span>
+              <button
+                onClick={() => setNsFilter(null)}
+                className={`mono text-xs px-2.5 py-1 rounded border transition-colors ${
+                  nsFilter === null
+                    ? "border-lime text-lime bg-lime/10"
+                    : "border-steel text-text-muted hover:border-lime hover:text-lime"
+                }`}
+              >
+                All
+              </button>
+              {allNamespaces.map((ns) => (
+                <button
+                  key={ns}
+                  onClick={() => setNsFilter(nsFilter === ns ? null : ns)}
+                  className={`mono text-xs px-2.5 py-1 rounded border transition-colors ${
+                    nsFilter === ns
+                      ? "border-cyan text-cyan bg-cyan/10"
+                      : "border-steel text-text-muted hover:border-cyan hover:text-cyan"
+                  }`}
+                >
+                  {ns}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* States */}

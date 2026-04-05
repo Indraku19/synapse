@@ -45,7 +45,7 @@ sentence_transformers/
 models/
 # Exception: app/models/ is source code, not ML weights
 !backend/app/models/
-!backend/app/models/**
+!backend/app/models/*.py
 
 # ── IDE / OS ───────────────────────────────────────────────────────────────
 .vscode/

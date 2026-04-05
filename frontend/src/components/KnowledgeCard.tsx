@@ -64,10 +64,17 @@ export function KnowledgeCard({ entry, showScore = false }: Props) {
 
       {/* Footer */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-steel">
-        <span className="mono text-xs text-text-muted truncate max-w-[200px]">
-          {entry.source}
-        </span>
-        <span className="mono text-xs text-text-muted">
+        <div className="flex items-center gap-2 min-w-0">
+          {entry.namespace && (
+            <span className="mono text-xs px-1.5 py-0.5 rounded border border-cyan/30 text-cyan bg-cyan/5 shrink-0">
+              {entry.namespace}
+            </span>
+          )}
+          <span className="mono text-xs text-text-muted truncate max-w-[180px]">
+            {entry.source}
+          </span>
+        </div>
+        <span className="mono text-xs text-text-muted shrink-0">
           {formatRelative(entry.timestamp)}
         </span>
       </div>

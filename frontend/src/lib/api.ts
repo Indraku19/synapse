@@ -10,6 +10,7 @@ import type {
   QueryKnowledgeResponse,
   KnowledgeEntry,
   NetworkStats,
+  NamespacesResponse,
 } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -34,6 +35,7 @@ const MOCK_ENTRIES: KnowledgeEntry[] = [
     hash: "a3f8b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1",
     cid: "zg:a3f8b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1",
     on_chain: false,
+    namespace: "engineering",
   },
   {
     knowledge_id: "kn_02k0y3b5c9d4e8f7g1h6i3j4",
@@ -46,6 +48,7 @@ const MOCK_ENTRIES: KnowledgeEntry[] = [
     hash: "b4g9c3d2e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0b2",
     cid: "zg:b4g9c3d2e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0b2",
     on_chain: false,
+    namespace: "engineering",
   },
   {
     knowledge_id: "kn_03l1z4c6d0e9f8g2h7i4j5k6",
@@ -58,6 +61,7 @@ const MOCK_ENTRIES: KnowledgeEntry[] = [
     hash: "c5h0d4e3f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0c3",
     cid: null,
     on_chain: false,
+    namespace: "legal",
   },
   {
     knowledge_id: "kn_04m2a5d7e1f0g9h3i8j6k7l8",
@@ -70,6 +74,20 @@ const MOCK_ENTRIES: KnowledgeEntry[] = [
     hash: "d6i1e5f4g7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1d4",
     cid: "zg:d6i1e5f4g7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1d4",
     on_chain: false,
+    namespace: null,
+  },
+  {
+    knowledge_id: "kn_05n3b6e8f2g1h0i4j9k8l9m0",
+    content:
+      "Clinical insight: Elevated troponin (>0.04 ng/mL) with ST-segment elevation indicates acute myocardial infarction. Administer aspirin 300mg immediately and arrange PCI within 90 minutes.",
+    source: "agent://medical-agent-alpha/v1",
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    agent_id: "agent_medical_01",
+    confidence_score: 0.97,
+    hash: "e7j2f6g5h8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2e5",
+    cid: "zg:e7j2f6g5h8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2e5",
+    on_chain: false,
+    namespace: "medical",
   },
 ];
 
@@ -112,13 +130,17 @@ export async function queryKnowledge(
   if (USE_MOCK) {
     await delay(400);
     const q      = req.query.toLowerCase();
-    const scored = MOCK_ENTRIES
+    const pool   = req.namespace
+      ? MOCK_ENTRIES.filter((e) => e.namespace === req.namespace)
+      : MOCK_ENTRIES;
+    const scored = pool
       .map((e) => ({
         knowledge_id:     e.knowledge_id,
         content:          e.content,
         source:           e.source,
         agent_id:         e.agent_id,
         timestamp:        e.timestamp,
+        namespace:        e.namespace ?? null,
         confidence_score:
           e.content.toLowerCase().includes(q) || e.source.toLowerCase().includes(q)
             ? e.confidence_score
@@ -143,6 +165,17 @@ export async function listKnowledge(): Promise<KnowledgeEntry[]> {
     return MOCK_ENTRIES;
   }
   const res = await fetch(`${BASE_URL}/knowledge`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
+
+export async function listNamespaces(): Promise<NamespacesResponse> {
+  if (USE_MOCK) {
+    await delay(150);
+    const ns = [...new Set(MOCK_ENTRIES.map((e) => e.namespace).filter(Boolean))] as string[];
+    return { namespaces: ns.sort(), global_entries: MOCK_ENTRIES.filter((e) => !e.namespace).length };
+  }
+  const res = await fetch(`${BASE_URL}/knowledge/namespaces`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { queryKnowledge } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { queryKnowledge, listNamespaces } from "@/lib/api";
 import { KnowledgeCard } from "@/components/KnowledgeCard";
 import type { QueryResult } from "@/lib/types";
 
@@ -13,12 +13,21 @@ const SUGGESTED = [
 ];
 
 export default function QueryPage() {
-  const [query, setQuery]       = useState("");
-  const [topK, setTopK]         = useState(5);
-  const [loading, setLoading]   = useState(false);
-  const [results, setResults]   = useState<QueryResult[] | null>(null);
-  const [error, setError]       = useState<string | null>(null);
-  const [searched, setSearched] = useState(false);
+  const [query, setQuery]           = useState("");
+  const [topK, setTopK]             = useState(5);
+  const [namespace, setNamespace]   = useState<string | null>(null);
+  const [namespaces, setNamespaces] = useState<string[]>([]);
+  const [loading, setLoading]       = useState(false);
+  const [results, setResults]       = useState<QueryResult[] | null>(null);
+  const [error, setError]           = useState<string | null>(null);
+  const [searched, setSearched]     = useState(false);
+
+  // Load available namespaces on mount
+  useEffect(() => {
+    listNamespaces()
+      .then((r) => setNamespaces(r.namespaces))
+      .catch(() => {}); // non-critical
+  }, []);
 
   const handleSearch = async (q?: string) => {
     const finalQuery = q ?? query;
@@ -29,7 +38,7 @@ export default function QueryPage() {
     setSearched(false);
 
     try {
-      const res = await queryKnowledge({ query: finalQuery, top_k: topK });
+      const res = await queryKnowledge({ query: finalQuery, top_k: topK, namespace });
       setResults(res.results);
       setSearched(true);
       if (q) setQuery(q);
@@ -85,6 +94,41 @@ export default function QueryPage() {
           </button>
         </div>
 
+        {/* Namespace filter */}
+        <div className="flex flex-col gap-1.5">
+          <span className="mono text-xs text-text-muted uppercase">Context Namespace</span>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setNamespace(null)}
+              className={`mono text-xs px-2.5 py-1 rounded border transition-colors ${
+                namespace === null
+                  ? "border-lime text-lime bg-lime/10"
+                  : "border-steel text-text-muted hover:border-lime hover:text-lime"
+              }`}
+            >
+              All (global)
+            </button>
+            {namespaces.map((ns) => (
+              <button
+                key={ns}
+                onClick={() => setNamespace(namespace === ns ? null : ns)}
+                className={`mono text-xs px-2.5 py-1 rounded border transition-colors ${
+                  namespace === ns
+                    ? "border-cyan text-cyan bg-cyan/10"
+                    : "border-steel text-text-muted hover:border-cyan hover:text-cyan"
+                }`}
+              >
+                {ns}
+              </button>
+            ))}
+          </div>
+          <span className="mono text-xs text-text-muted">
+            {namespace
+              ? `Searching only in namespace "${namespace}" — other domains are isolated`
+              : "Searching global pool — all namespaces included"}
+          </span>
+        </div>
+
         {/* top_k hint */}
         <div className="mono text-xs text-text-muted">
           top_k = {topK} · vector similarity search
@@ -117,6 +161,11 @@ export default function QueryPage() {
           <div className="flex items-center justify-between">
             <span className="mono text-xs text-text-muted uppercase tracking-widest">
               {results.length} result{results.length !== 1 ? "s" : ""} found
+              {namespace && (
+                <span className="ml-2 px-1.5 py-0.5 rounded border border-cyan/30 text-cyan bg-cyan/5 normal-case">
+                  {namespace}
+                </span>
+              )}
             </span>
             <span className="mono text-xs text-text-muted">
               Ranked by semantic similarity
