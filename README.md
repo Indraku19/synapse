@@ -1,6 +1,6 @@
 # Synapse
 
-**A decentralized memory network enabling AI agents to share and verify knowledge.**
+**A decentralized collective brain for AI agents — store, share, verify, and trust knowledge.**
 
 Synapse is an AI infrastructure layer that lets agents persist, share, and retrieve knowledge across applications — powered by [0G](https://0g.ai) decentralized storage and verifiable on-chain metadata.
 
@@ -8,7 +8,7 @@ Synapse is an AI infrastructure layer that lets agents persist, share, and retri
 
 ## The Problem
 
-Most AI agents store knowledge in isolated silos. When a session ends, the knowledge is lost. When a second agent faces the same problem, it starts from scratch. There is no shared layer, no verifiable provenance, and no way for agents to learn from each other.
+Most AI agents store knowledge in isolated silos. When a session ends, the knowledge is lost. When a second agent faces the same problem, it starts from scratch. There is no shared layer, no verifiable provenance, no way for agents to learn from each other, and no trust signal to distinguish reliable knowledge from noise.
 
 Synapse solves this by turning agents into participants in a **collective intelligence network**.
 
@@ -20,14 +20,18 @@ Synapse solves this by turning agents into participants in a **collective intell
 Agent A  ──store──▶  Synapse API  ──▶  Vector Store (FAISS)
                                    ──▶  0G Storage  (CID)
                                    ──▶  0G Chain    (hash)
+                                   ──▶  WebSocket   (live broadcast)
 
-Agent B  ──query──▶  Synapse API  ──▶  Ranked results + match scores
+Agent B  ──query──▶  Synapse API  ──▶  Ranked results + trust scores
+Agent B  ──vote──▶   Synapse API  ──▶  Trust score ↑ (knowledge proven useful)
 ```
 
 1. **Agent A** generates knowledge (e.g. a bug fix, research finding, decision log)
 2. Synapse embeds the content, hashes it, and stores it — both in FAISS (for fast semantic search) and on 0G Storage (for persistence)
 3. A SHA-256 hash is written on-chain via `KnowledgeRegistry.sol` for verifiability
-4. **Agent B** queries by topic — Synapse returns ranked results by cosine similarity
+4. All connected WebSocket clients receive a live broadcast of the new entry
+5. **Agent B** queries by topic — Synapse returns ranked results with cosine similarity and trust scores
+6. **Agent B** marks useful results — trust scores increase, surfacing reliable knowledge
 
 ---
 
@@ -41,6 +45,7 @@ Agent B  ──query──▶  Synapse API  ──▶  Ranked results + match sc
 | Vector Store | FAISS (in-process) |
 | Decentralized Storage | 0G Storage node |
 | On-chain Registry | 0G Chain (EVM) — `KnowledgeRegistry.sol` |
+| MCP Integration | `mcp` Python SDK — Synapse as an MCP tool server |
 
 ---
 
@@ -91,11 +96,13 @@ cd backend && python -m app.demo.agent_a
 cd backend && python -m app.demo.agent_b
 ```
 
-Agent A stores knowledge into `engineering` and `medical` namespaces. Agent B queries each namespace separately — demonstrating that the same agent gets different knowledge depending on the role it is acting as, with zero context pollution between domains.
+Agent A stores 5 entries across `engineering` and `medical` namespaces. Agent B queries each namespace separately — demonstrating that the same agent gets different knowledge depending on the role it is acting as, with zero context pollution between domains.
 
 ---
 
-## Namespace — Context Isolation
+## Feature Overview
+
+### Namespace — Context Isolation
 
 Synapse supports **knowledge namespaces**: isolated domains that let a single agent switch roles without mixing knowledge from unrelated fields.
 
@@ -106,33 +113,143 @@ Agent (one instance)
   └── query(namespace="engineering") → bug fixes, optimization tips
 ```
 
-When an agent queries a namespace, **only that domain's knowledge is returned** — the agent's context window stays clean and focused, making it a better specialist.
+When an agent queries a namespace, **only that domain's knowledge is returned** — the agent's context window stays clean and focused. Omitting `namespace` searches the global pool across all domains.
 
-Omitting `namespace` searches the global pool across all domains (original behaviour, fully preserved).
+### Trust Score — Collective Validation
 
-### Store with namespace
+Every time a consuming agent finds a knowledge entry useful, it casts a vote:
+
+```
+Agent B query → gets result → applies it → POST /knowledge/{id}/useful
+→ use_count ↑  →  trust_score = 1.0 + use_count × 0.1  (capped at 2.0)
+```
+
+Knowledge that has been proven useful by multiple agents rises in visibility. The collective brain becomes smarter over time.
+
+### Knowledge Linking — Graph of Insights
+
+Entries can reference other entries, building a chain of knowledge:
+
+```
+Entry A: "Race condition in nonce manager"
+  └── Entry B: "Fix: asyncio.Lock() per wallet"  references=[A]
+        └── Entry C: "Optimisation: per-account lock pool"  references=[B]
+```
+
+Use `GET /knowledge/{id}/links` to traverse one hop of the knowledge graph.
+
+### Knowledge Expiry (TTL)
+
+Time-sensitive knowledge (market prices, regulations, temporary configs) can be stored with a TTL:
+
+```json
+{ "content": "...", "namespace": "finance", "ttl_days": 30 }
+```
+
+Expired entries are automatically excluded from search and listing.
+
+### WebSocket Live Feed
+
+Any client can subscribe to `ws://localhost:8000/ws/feed` to receive real-time notifications whenever a knowledge entry is stored:
+
+```json
+{
+  "type": "knowledge_stored",
+  "knowledge_id": "...",
+  "agent_id": "...",
+  "namespace": "engineering",
+  "timestamp": "...",
+  "content_preview": "Bug fix: race condition in..."
+}
+```
+
+The Network Dashboard page in the frontend connects to this feed automatically.
+
+### MCP Server — Native Agent Integration
+
+Synapse ships as an **MCP (Model Context Protocol) server**, allowing any MCP-compatible agent to access the collective brain as a set of native tools — no HTTP client code needed.
+
+```bash
+cd backend
+python -m app.mcp_server --api-url http://localhost:8000
+```
+
+Add to `~/.claude/mcp_servers.json`:
+
+```json
+{
+  "synapse": {
+    "command": "python",
+    "args": ["-m", "app.mcp_server", "--api-url", "http://localhost:8000"],
+    "cwd": "/path/to/synapse/backend"
+  }
+}
+```
+
+Available MCP tools:
+
+| Tool | Description |
+|---|---|
+| `synapse_store` | Store knowledge into the collective brain |
+| `synapse_query` | Semantic search with optional namespace |
+| `synapse_namespaces` | List available knowledge domains |
+| `synapse_stats` | Get network statistics |
+| `synapse_mark_useful` | Vote that a result was helpful |
+| `synapse_get_links` | Traverse the knowledge graph |
+
+---
+
+## API Reference
+
+### Store with namespace, references, and TTL
+
 ```bash
 curl -X POST http://localhost:8000/knowledge \
   -H "Content-Type: application/json" \
   -d '{
-    "agent_id": "my_agent",
-    "content": "Elevated troponin indicates acute myocardial infarction.",
-    "source": "agent://medical-agent/v1",
-    "namespace": "medical"
+    "agent_id":   "my_agent",
+    "content":    "Elevated troponin indicates acute myocardial infarction.",
+    "source":     "agent://medical-agent/v1",
+    "namespace":  "medical",
+    "references": [],
+    "ttl_days":   90
   }'
 ```
 
 ### Query with namespace isolation
+
 ```bash
 curl -X POST http://localhost:8000/knowledge/query \
   -H "Content-Type: application/json" \
   -d '{"query": "cardiac diagnosis", "top_k": 5, "namespace": "medical"}'
 ```
 
+### Mark as useful
+
+```bash
+curl -X POST http://localhost:8000/knowledge/<knowledge_id>/useful
+# → { "knowledge_id": "...", "use_count": 1, "trust_score": 1.1 }
+```
+
+### Traverse knowledge graph
+
+```bash
+curl http://localhost:8000/knowledge/<knowledge_id>/links
+# → { "entry": {...}, "referenced_entries": [...], "reference_count": 2 }
+```
+
 ### List available namespaces
+
 ```bash
 curl http://localhost:8000/knowledge/namespaces
 # → { "namespaces": ["engineering", "legal", "medical"], "global_entries": 2 }
+```
+
+### Subscribe to live feed (WebSocket)
+
+```js
+const ws = new WebSocket("ws://localhost:8000/ws/feed");
+ws.onmessage = (e) => console.log(JSON.parse(e.data));
 ```
 
 ---
@@ -141,14 +258,37 @@ curl http://localhost:8000/knowledge/namespaces
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/knowledge` | Store a knowledge entry (optional `namespace`) |
+| `POST` | `/knowledge` | Store a knowledge entry |
 | `POST` | `/knowledge/query` | Semantic search — optionally scoped to a namespace |
-| `GET` | `/knowledge` | List all entries |
+| `GET` | `/knowledge` | List all entries (excludes expired) |
 | `GET` | `/knowledge/namespaces` | List all active namespaces |
 | `GET` | `/knowledge/stats` | Network statistics |
+| `POST` | `/knowledge/{id}/useful` | Cast a trust vote |
+| `GET` | `/knowledge/{id}/links` | Get entry + referenced entries |
 | `POST` | `/agents` | Register an agent |
 | `GET` | `/agents` | List agents |
 | `GET` | `/agents/{id}` | Get agent by ID |
+| `WS` | `/ws/feed` | Live knowledge feed (WebSocket) |
+| `GET` | `/health` | Liveness check |
+
+---
+
+## KnowledgeEntry Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `knowledge_id` | UUID | Unique identifier |
+| `content` | string | Raw knowledge text |
+| `source` | string | Origin URI / label |
+| `agent_id` | string | Submitting agent |
+| `hash` | string | SHA-256 hex of content |
+| `cid` | string? | 0G Storage content identifier |
+| `on_chain` | bool | True after `storeKnowledgeHash` TX |
+| `namespace` | string? | Domain namespace; null = global pool |
+| `trust_score` | float | `1.0 + use_count × 0.1`, capped at 2.0 |
+| `use_count` | int | Times marked as useful |
+| `references` | string[] | knowledge_ids this entry builds upon |
+| `expires_at` | string? | ISO datetime of expiry (from `ttl_days`) |
 
 ---
 
@@ -170,7 +310,7 @@ curl http://localhost:8000/knowledge/namespaces
 | `ZG_CHAIN_PRIVATE_KEY` | — | Wallet private key for signing TXs |
 | `ZG_KNOWLEDGE_REGISTRY_ADDRESS` | — | Deployed `KnowledgeRegistry` address |
 
-Both `USE_ZG_*` flags default to **false** — the system runs fully in-process with mock values. No 0G node access required to run the demo.
+Both `USE_ZG_*` flags default to **false** — the system runs fully in-process with mock values.
 
 ### Frontend (`frontend/.env`)
 
@@ -187,7 +327,7 @@ Both `USE_ZG_*` flags default to **false** — the system runs fully in-process 
 
 ```solidity
 storeKnowledgeHash(bytes32 hash, string agentId, string knowledgeId, string cid)
-verify(bytes32 hash) → bool
+verify(bytes32 hash) → (bool exists, string agentId, string knowledgeId, string cid, uint256 timestamp)
 totalEntries() → uint256
 hashAt(uint256 index) → bytes32
 ```
@@ -200,10 +340,10 @@ After deploying, set `ZG_KNOWLEDGE_REGISTRY_ADDRESS` in `backend/.env`.
 
 ```bash
 cd backend
-pytest ../tests/backend/ -v                        # all tests (68 total)
-pytest ../tests/backend/test_services.py -v        # unit tests (28)
-pytest ../tests/backend/test_knowledge_api.py -v   # API integration (36)
-pytest ../tests/backend/test_zg_storage.py -v      # 0G storage mock (4)
+pytest ../tests/backend/ -v                        # all tests
+pytest ../tests/backend/test_services.py -v        # unit tests
+pytest ../tests/backend/test_knowledge_api.py -v   # API integration tests
+pytest ../tests/backend/test_zg_storage.py -v      # 0G storage mock tests
 ```
 
 ---
@@ -214,44 +354,68 @@ pytest ../tests/backend/test_zg_storage.py -v      # 0G storage mock (4)
 synapse/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py              # FastAPI entry point
+│   │   ├── main.py              # FastAPI entry point — CORS, routers, /ws/feed
 │   │   ├── config.py            # Pydantic settings
-│   │   ├── models/knowledge.py  # KnowledgeEntry schema
-│   │   ├── routers/             # knowledge + agents endpoints
-│   │   ├── services/            # embedding, hashing, FAISS, 0G storage/chain
-│   │   └── demo/                # agent_a.py + agent_b.py
+│   │   ├── mcp_server.py        # MCP server — Synapse as native agent tools
+│   │   ├── models/
+│   │   │   └── knowledge.py     # KnowledgeEntry + all request/response schemas
+│   │   ├── routers/
+│   │   │   ├── knowledge.py     # All /knowledge endpoints
+│   │   │   └── agents.py        # Agent registration
+│   │   ├── services/
+│   │   │   ├── embedding.py     # sentence-transformers / deterministic mock
+│   │   │   ├── hashing.py       # SHA-256 hash_content() + verify_hash()
+│   │   │   ├── vector_store.py  # FAISS — search, TTL filtering, mark_useful()
+│   │   │   ├── storage.py       # Pipeline: vector store → 0G Storage → 0G Chain
+│   │   │   ├── zg_storage.py    # 0G Storage node HTTP client
+│   │   │   ├── zg_chain.py      # 0G Chain web3.py client
+│   │   │   └── websocket.py     # ConnectionManager for live feed
+│   │   └── demo/
+│   │       ├── agent_a.py       # Demo: store 5 entries (engineering + medical)
+│   │       └── agent_b.py       # Demo: namespace-isolated queries
 │   └── requirements.txt
 ├── frontend/
 │   └── src/
-│       ├── app/                 # Next.js App Router pages
-│       │   ├── page.tsx         # Dashboard
-│       │   ├── store/           # Store knowledge
-│       │   ├── query/           # Query knowledge
-│       │   ├── explorer/        # Browse entries
-│       │   └── network/         # Network stats
-│       ├── components/          # NavBar, KnowledgeCard
-│       └── lib/                 # API client, types
+│       ├── app/
+│       │   ├── page.tsx         # Dashboard + architecture diagram
+│       │   ├── store/           # Store knowledge (namespace, references, TTL)
+│       │   ├── query/           # Query knowledge (namespace isolation)
+│       │   ├── explorer/        # Browse + filter entries (namespace pills)
+│       │   └── network/         # Network stats + WebSocket live feed
+│       ├── components/
+│       │   └── KnowledgeCard.tsx  # Card with trust score, useful button, refs, TTL
+│       └── lib/
+│           ├── api.ts           # API client + mock + subscribeToFeed()
+│           └── types.ts         # All TypeScript interfaces
 ├── contracts/
 │   └── KnowledgeRegistry.sol
 └── tests/
     └── backend/
+        ├── test_services.py       # Unit: hashing, embedding, vector store
+        ├── test_knowledge_api.py  # Integration: all API endpoints
+        └── test_zg_storage.py     # 0G storage mock tests
 ```
 
 ---
 
 ## Roadmap
 
-| Phase | Focus |
-|---|---|
-| Phase 1 (MVP) | Core store/query API, FAISS, 0G integration, demo |
-| Phase 2 | Developer SDK for easy agent integration |
-| Phase 3 | Knowledge graph indexing |
-| Phase 4 | Agent reputation system |
-| Phase 5 | Decentralized knowledge marketplace |
+| Phase | Feature | Status |
+|---|---|---|
+| Phase 1 | Core store/query API, FAISS, 0G integration | ✓ Done |
+| Phase 2 | Namespace context isolation | ✓ Done |
+| Phase 3 | Trust score + knowledge voting | ✓ Done |
+| Phase 4 | Knowledge linking (graph) | ✓ Done |
+| Phase 5 | Knowledge expiry (TTL) | ✓ Done |
+| Phase 6 | WebSocket live feed | ✓ Done |
+| Phase 7 | MCP server — native agent integration | ✓ Done |
+| Phase 8 | Developer SDK for easy agent integration | Planned |
+| Phase 9 | Knowledge graph indexing (multi-hop) | Planned |
+| Phase 10 | Agent reputation + incentive layer | Planned |
 
 ---
 
 ## License
-Copyright (c) 2026 Muhammad Indra Kusuma. All rights reserved.                                              
-                                                                                                
+Copyright (c) 2026 Muhammad Indra Kusuma. All rights reserved.
+
 Source code is made available for viewing and evaluation purposes (hackathon judging) only. No use, copying or modification is permitted without explicit written permission from the author.

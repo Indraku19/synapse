@@ -2,7 +2,7 @@
 Pydantic data models for knowledge objects.
 Matches the data model defined in synapse_tdd.md §6.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 from pydantic import BaseModel, Field
 import uuid
@@ -13,10 +13,12 @@ import uuid
 # ---------------------------------------------------------------------------
 
 class StoreKnowledgeRequest(BaseModel):
-    agent_id: str           = Field(..., description="Unique identifier of the submitting agent")
-    content: str            = Field(..., min_length=1, description="Knowledge text content")
-    source: str             = Field(..., description="URI or label identifying the knowledge origin")
+    agent_id: str            = Field(..., description="Unique identifier of the submitting agent")
+    content: str             = Field(..., min_length=1, description="Knowledge text content")
+    source: str              = Field(..., description="URI or label identifying the knowledge origin")
     namespace: Optional[str] = Field(None, description="Knowledge domain/role namespace (e.g. 'medical', 'legal'). None = global pool.")
+    references: list[str]   = Field(default_factory=list, description="List of knowledge_ids this entry builds upon")
+    ttl_days: Optional[int]  = Field(None, ge=1, description="Days until this knowledge expires. None = no expiry.")
 
 
 class StoreKnowledgeResponse(BaseModel):
@@ -40,7 +42,11 @@ class QueryResult(BaseModel):
     agent_id: str
     confidence_score: float
     timestamp: str
-    namespace: Optional[str] = None
+    namespace: Optional[str]  = None
+    trust_score: float        = 1.0
+    use_count: int            = 0
+    references: list[str]    = Field(default_factory=list)
+    expires_at: Optional[str] = None
 
 
 class QueryKnowledgeResponse(BaseModel):
@@ -65,7 +71,14 @@ class KnowledgeEntry(BaseModel):
     hash: str                     = ""
     cid: Optional[str]            = None   # 0G Storage content identifier
     on_chain: bool                = False  # True after successful chain write
-    namespace: Optional[str]      = None   # Domain namespace (e.g. "medical", "legal"); None = global pool
+    namespace: Optional[str]      = None   # Domain namespace; None = global pool
+    # Phase 2 — trust
+    use_count: int                = 0      # Times marked as useful by consuming agents
+    trust_score: float            = 1.0   # 1.0 + use_count * 0.1, capped at 2.0
+    # Phase 3 — knowledge graph
+    references: list[str]        = Field(default_factory=list)   # knowledge_ids this entry builds upon
+    # Phase 4 — TTL
+    expires_at: Optional[str]    = None   # ISO datetime when this entry expires
 
     def to_query_result(self, score: float) -> QueryResult:
         return QueryResult(
@@ -76,7 +89,22 @@ class KnowledgeEntry(BaseModel):
             confidence_score=score,
             timestamp=self.timestamp,
             namespace=self.namespace,
+            trust_score=self.trust_score,
+            use_count=self.use_count,
+            references=self.references,
+            expires_at=self.expires_at,
         )
+
+    def is_expired(self) -> bool:
+        if self.expires_at is None:
+            return False
+        return datetime.now(timezone.utc).isoformat() > self.expires_at
+
+
+def compute_expires_at(ttl_days: Optional[int]) -> Optional[str]:
+    if ttl_days is None:
+        return None
+    return (datetime.now(timezone.utc) + timedelta(days=ttl_days)).isoformat()
 
 
 # ---------------------------------------------------------------------------

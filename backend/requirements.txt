@@ -14,11 +14,14 @@ chromadb==0.5.3
 # Hashing / crypto
 # (hashlib is stdlib — no extra dep needed)
 
-# HTTP client (used by 0G Storage client)
+# HTTP client (used by 0G Storage client and MCP server)
 httpx==0.27.0
 
 # 0G Chain — Ethereum-compatible smart contract interaction
 web3==6.20.0
+
+# MCP Server — expose Synapse as an MCP tool server for AI agents
+mcp>=1.0.0
 
 # Testing
 pytest==8.2.2

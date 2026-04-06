@@ -9,6 +9,8 @@ export default function StorePage() {
   const [content, setContent]       = useState("");
   const [source, setSource]         = useState("");
   const [namespace, setNamespace]   = useState("");
+  const [references, setReferences] = useState("");
+  const [ttlDays, setTtlDays]       = useState<number | "">("");
   const [loading, setLoading]       = useState(false);
   const [result, setResult]         = useState<StoreKnowledgeResponse | null>(null);
   const [error, setError]           = useState<string | null>(null);
@@ -22,11 +24,18 @@ export default function StorePage() {
     setError(null);
 
     try {
+      const refList = references
+        .split(",")
+        .map((r) => r.trim())
+        .filter(Boolean);
+
       const res = await storeKnowledge({
-        agent_id: agentId,
+        agent_id:   agentId,
         content,
         source,
-        namespace: namespace.trim() || null,
+        namespace:  namespace.trim() || null,
+        references: refList,
+        ttl_days:   ttlDays !== "" ? Number(ttlDays) : null,
       });
       setResult(res);
     } catch (err) {
@@ -43,6 +52,8 @@ export default function StorePage() {
     setContent("");
     setSource("");
     setNamespace("");
+    setReferences("");
+    setTtlDays("");
   };
 
   return (
@@ -131,6 +142,57 @@ export default function StorePage() {
             </span>
           </div>
 
+          {/* References */}
+          <div className="flex flex-col gap-1.5">
+            <label className="mono text-xs text-text-muted uppercase">
+              References <span className="normal-case text-steel">(optional)</span>
+            </label>
+            <input
+              type="text"
+              placeholder="knowledge_id_1, knowledge_id_2 — comma-separated"
+              value={references}
+              onChange={(e) => setReferences(e.target.value)}
+              className="input-cyber mono text-sm px-3 py-2 w-full"
+            />
+            <span className="mono text-xs text-text-muted">
+              IDs of entries this knowledge builds upon — links the knowledge graph
+            </span>
+          </div>
+
+          {/* TTL */}
+          <div className="flex flex-col gap-1.5">
+            <label className="mono text-xs text-text-muted uppercase">
+              Expiry <span className="normal-case text-steel">(optional)</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                placeholder="—"
+                value={ttlDays}
+                onChange={(e) => setTtlDays(e.target.value === "" ? "" : Number(e.target.value))}
+                className="input-cyber mono text-sm px-3 py-2 w-24 text-center"
+              />
+              <span className="mono text-xs text-text-muted">days until this knowledge expires</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[7, 30, 90, 365].map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setTtlDays(ttlDays === d ? "" : d)}
+                  className={`mono text-xs px-2 py-0.5 rounded border transition-colors ${
+                    ttlDays === d
+                      ? "border-yellow-400/50 text-yellow-400 bg-yellow-400/10"
+                      : "border-steel text-text-muted hover:border-yellow-400/50 hover:text-yellow-400"
+                  }`}
+                >
+                  {d}d
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Content */}
           <div className="flex flex-col gap-1.5">
             <label className="mono text-xs text-text-muted uppercase">
@@ -211,12 +273,14 @@ export default function StorePage() {
         <pre className="mono text-xs text-text-muted overflow-x-auto leading-relaxed">
           {JSON.stringify(
             {
-              agent_id: agentId || "<agent_id>",
-              content: content
+              agent_id:   agentId || "<agent_id>",
+              content:    content
                 ? content.slice(0, 60) + (content.length > 60 ? "…" : "")
                 : "<content>",
-              source: source || "<source>",
-              namespace: namespace.trim() || null,
+              source:     source || "<source>",
+              namespace:  namespace.trim() || null,
+              references: references.split(",").map((r) => r.trim()).filter(Boolean),
+              ttl_days:   ttlDays !== "" ? Number(ttlDays) : null,
             },
             null,
             2

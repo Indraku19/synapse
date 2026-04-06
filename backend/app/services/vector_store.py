@@ -58,31 +58,29 @@ class VectorStore:
     ) -> list[tuple[KnowledgeEntry, float]]:
         """
         Return up to top_k (entry, score) pairs sorted by descending similarity.
-        Scores are cosine-similarity in [0, 1] (higher = more similar).
+        Expired entries are automatically excluded.
 
         namespace:
           None  → search the global pool (all entries, original behaviour).
           str   → search only within entries that match this namespace,
                   isolating the context window from unrelated domains.
         """
-        if not self._entries:
+        live = [e for e in self._entries if not e.is_expired()]
+        if not live:
             return []
 
-        # When a namespace is requested, filter to that domain only and use
-        # linear search on the subset.  This guarantees strict isolation:
-        # medical queries never surface legal or engineering knowledge.
         if namespace is not None:
-            subset = [e for e in self._entries if e.namespace == namespace]
+            subset = [e for e in live if e.namespace == namespace]
             if not subset:
                 return []
             k = min(top_k, len(subset))
             return self._linear_search(query_embedding, k, entries=subset)
 
-        # No namespace → global pool search (original behaviour preserved)
-        k = min(top_k, len(self._entries))
-        if self._use_faiss and self._index.ntotal > 0:
+        k = min(top_k, len(live))
+        if self._use_faiss and self._index.ntotal > 0 and len(live) == len(self._entries):
+            # FAISS index mirrors _entries exactly only when nothing expired
             return self._faiss_search(query_embedding, k)
-        return self._linear_search(query_embedding, k)
+        return self._linear_search(query_embedding, k, entries=live)
 
     def _faiss_search(
         self, query_embedding: list[float], k: int
@@ -113,7 +111,21 @@ class VectorStore:
         return scored[:k]
 
     # ------------------------------------------------------------------
+    def mark_useful(self, knowledge_id: str) -> Optional[KnowledgeEntry]:
+        """Increment use_count and recalculate trust_score for the entry."""
+        entry = self.get_by_id(knowledge_id)
+        if entry is None:
+            return None
+        entry.use_count += 1
+        entry.trust_score = min(2.0, 1.0 + entry.use_count * 0.1)
+        return entry
+
+    # ------------------------------------------------------------------
     def get_all(self) -> list[KnowledgeEntry]:
+        """Return all non-expired entries."""
+        return [e for e in self._entries if not e.is_expired()]
+
+    def get_all_including_expired(self) -> list[KnowledgeEntry]:
         return list(self._entries)
 
     def get_by_id(self, knowledge_id: str) -> Optional[KnowledgeEntry]:
@@ -124,7 +136,7 @@ class VectorStore:
 
     @property
     def count(self) -> int:
-        return len(self._entries)
+        return len([e for e in self._entries if not e.is_expired()])
 
 
 def _cosine(a: list[float], b: list[float]) -> float:

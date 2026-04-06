@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { getNetworkStats } from "@/lib/api";
-import type { NetworkStats } from "@/lib/types";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { getNetworkStats, subscribeToFeed } from "@/lib/api";
+import type { NetworkStats, LiveFeedEvent } from "@/lib/types";
 
 const REFRESH_INTERVAL_MS = 8000;
+const MAX_FEED_EVENTS     = 20;
 
 export default function NetworkPage() {
   const [stats, setStats]     = useState<NetworkStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [feedEvents, setFeedEvents]   = useState<LiveFeedEvent[]>([]);
+  const [wsConnected, setWsConnected] = useState(false);
+  const feedRef = useRef<HTMLDivElement>(null);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -30,6 +34,20 @@ export default function NetworkPage() {
     const id = setInterval(fetchStats, REFRESH_INTERVAL_MS);
     return () => clearInterval(id);
   }, [fetchStats]);
+
+  // Live feed WebSocket subscription
+  useEffect(() => {
+    const unsubscribe = subscribeToFeed(
+      (event) => {
+        setFeedEvents((prev) => [event, ...prev].slice(0, MAX_FEED_EVENTS));
+        // Auto-scroll feed to top
+        feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      },
+      () => setWsConnected(true),
+      () => setWsConnected(false),
+    );
+    return unsubscribe;
+  }, []);
 
   return (
     <div className="flex flex-col gap-8 max-w-4xl">
@@ -135,6 +153,35 @@ export default function NetworkPage() {
             </div>
           )}
 
+          {/* Extra stats row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <BigStat
+              label="Useful Votes"
+              value={(stats.total_useful_votes ?? 0).toString()}
+              sub="trust signals"
+              color="text-lime"
+            />
+            <BigStat
+              label="Linked"
+              value={(stats.linked_entries ?? 0).toString()}
+              sub="entries with refs"
+              color="text-cyan"
+            />
+            <BigStat
+              label="Expiring"
+              value={(stats.expiring_entries ?? 0).toString()}
+              sub="TTL entries"
+              color={(stats.expiring_entries ?? 0) > 0 ? "text-yellow-400" : "text-text-muted"}
+            />
+            <BigStat
+              label="Live Clients"
+              value={wsConnected ? (stats.ws_connections ?? 1).toString() : "—"}
+              sub="WebSocket feed"
+              color={wsConnected ? "text-lime" : "text-text-muted"}
+              dot={wsConnected}
+            />
+          </div>
+
           {/* Architecture flow */}
           <div className="card-base p-6">
             <div className="mono text-xs text-text-muted uppercase tracking-widest mb-5">
@@ -164,6 +211,60 @@ export default function NetworkPage() {
                 status={stats.on_chain_entries > 0 ? "active" : "mock"}
                 detail={stats.on_chain_entries > 0 ? `${stats.on_chain_entries} hashes` : "disabled"}
               />
+            </div>
+          </div>
+
+          {/* Live knowledge feed */}
+          <div className="card-base p-5 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div className="mono text-xs text-text-muted uppercase tracking-widest">
+                Live Knowledge Feed
+              </div>
+              <span
+                className={`mono text-xs ${wsConnected ? "text-lime status-online" : "text-text-muted"}`}
+              >
+                {wsConnected ? "CONNECTED" : "CONNECTING…"}
+              </span>
+            </div>
+
+            <div
+              ref={feedRef}
+              className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1"
+            >
+              {feedEvents.length === 0 ? (
+                <div className="mono text-xs text-text-muted text-center py-6">
+                  Waiting for incoming knowledge…
+                </div>
+              ) : (
+                feedEvents.map((ev, i) => (
+                  <div
+                    key={`${ev.knowledge_id}-${i}`}
+                    className="flex flex-col gap-1 p-3 border border-steel rounded bg-surface/50 animate-in fade-in slide-in-from-top-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lime text-xs">▶</span>
+                        <span className="mono text-xs text-purple">{ev.agent_id}</span>
+                        {ev.namespace && (
+                          <span className="mono text-xs px-1 py-0 rounded border border-cyan/30 text-cyan bg-cyan/5">
+                            {ev.namespace}
+                          </span>
+                        )}
+                      </div>
+                      <span className="mono text-xs text-text-muted shrink-0">
+                        {new Date(ev.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-text-primary leading-relaxed line-clamp-2">
+                      {ev.content_preview}
+                    </p>
+                    <div className="mono text-xs text-steel truncate">
+                      {ev.knowledge_id}
+                      {ev.on_chain && <span className="ml-2 text-lime">⬡ on-chain</span>}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </>
