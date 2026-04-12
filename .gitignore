@@ -60,6 +60,9 @@ contracts/artifacts/
 contracts/cache/
 contracts/out/
 contracts/node_modules/
+contracts-deploy/artifacts/
+contracts-deploy/cache/
+contracts-deploy/node_modules/
 
 # ── Logs ───────────────────────────────────────────────────────────────────
 *.log
