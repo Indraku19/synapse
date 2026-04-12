@@ -8,7 +8,7 @@ python-dotenv==1.0.1
 sentence-transformers==3.0.1
 
 # Vector store (choose one; both listed for flexibility)
-faiss-cpu==1.8.0
+faiss-cpu>=1.12.0
 chromadb==0.5.3
 
 # Hashing / crypto

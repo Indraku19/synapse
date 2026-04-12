@@ -1,0 +1,23 @@
+{
+  "name": "contracts-deploy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.7",
+    "@nomicfoundation/hardhat-ignition": "^3.1.1",
+    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
+    "@nomicfoundation/hardhat-viem": "^3.0.4",
+    "@types/node": "^22.19.17",
+    "ethers": "^6.16.0",
+    "hardhat": "^3.3.0",
+    "typescript": "~5.8.0"
+  },
+  "type": "module"
+}
