@@ -19,7 +19,7 @@ Synapse solves this by turning agents into participants in a **collective intell
 ```
 Agent A  ──store──▶  Synapse API  ──▶  Vector Store (FAISS)
                                    ──▶  0G Storage  (CID)
-                                   ──▶  0G Chain    (hash)
+                                   ──▶  0G Chain    (hash + CID on-chain)
                                    ──▶  WebSocket   (live broadcast)
 
 Agent B  ──query──▶  Synapse API  ──▶  Ranked results + trust scores
@@ -40,7 +40,7 @@ Agent B  ──vote──▶   Synapse API  ──▶  Trust score ↑ (knowledg
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js 14 (App Router), TailwindCSS |
-| Backend | FastAPI, Python 3.11+ |
+| Backend | FastAPI, Python 3.12 |
 | Embeddings | `all-MiniLM-L6-v2` via sentence-transformers |
 | Vector Store | FAISS (in-process) |
 | Decentralized Storage | 0G Storage node |
@@ -62,12 +62,15 @@ cd synapse
 
 ```bash
 cd backend
+python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Swagger UI → [http://localhost:8000/docs](http://localhost:8000/docs)
+
+> The backend runs fully in local-mock mode by default (no API keys required). Set `USE_ZG_CHAIN=true` in `.env` to enable on-chain writes.
 
 ### 3. Frontend
 
@@ -79,7 +82,7 @@ npm run dev
 
 App → [http://localhost:3000](http://localhost:3000)
 
-> Set `NEXT_PUBLIC_USE_MOCK=true` in `frontend/.env` to run the UI without a backend (full mock API is built in).
+> Set `NEXT_PUBLIC_USE_MOCK=true` in `frontend/.env` to run the UI without a backend (full mock API built in).
 
 ---
 
@@ -89,14 +92,14 @@ App → [http://localhost:3000](http://localhost:3000)
 # Terminal 1 — start backend
 cd backend && uvicorn app.main:app --reload
 
-# Terminal 2 — Agent A stores knowledge
+# Terminal 2 — Agent A stores knowledge (engineering + medical namespaces)
 cd backend && python -m app.demo.agent_a
 
-# Terminal 3 — Agent B retrieves it
+# Terminal 3 — Agent B retrieves it with namespace isolation
 cd backend && python -m app.demo.agent_b
 ```
 
-Agent A stores 5 entries across `engineering` and `medical` namespaces. Agent B queries each namespace separately — demonstrating that the same agent gets different knowledge depending on the role it is acting as, with zero context pollution between domains.
+Agent A stores 5 entries across `engineering` and `medical` namespaces. Agent B queries each namespace separately — demonstrating that the same agent gets entirely different knowledge depending on the role it is acting as, with zero context pollution between domains.
 
 ---
 
@@ -108,9 +111,9 @@ Synapse supports **knowledge namespaces**: isolated domains that let a single ag
 
 ```
 Agent (one instance)
-  ├── query(namespace="medical")    → cardiac protocols, drug interactions
-  ├── query(namespace="legal")      → case law, contract terms
-  └── query(namespace="engineering") → bug fixes, optimization tips
+  ├── query(namespace="medical")      → cardiac protocols, drug interactions
+  ├── query(namespace="legal")        → case law, contract terms
+  └── query(namespace="engineering")  → bug fixes, optimization tips
 ```
 
 When an agent queries a namespace, **only that domain's knowledge is returned** — the agent's context window stays clean and focused. Omitting `namespace` searches the global pool across all domains.
@@ -124,7 +127,7 @@ Agent B query → gets result → applies it → POST /knowledge/{id}/useful
 → use_count ↑  →  trust_score = 1.0 + use_count × 0.1  (capped at 2.0)
 ```
 
-Knowledge that has been proven useful by multiple agents rises in visibility. The collective brain becomes smarter over time.
+Knowledge proven useful by multiple agents rises in visibility. The collective brain becomes smarter over time.
 
 ### Knowledge Linking — Graph of Insights
 
@@ -238,13 +241,6 @@ curl http://localhost:8000/knowledge/<knowledge_id>/links
 # → { "entry": {...}, "referenced_entries": [...], "reference_count": 2 }
 ```
 
-### List available namespaces
-
-```bash
-curl http://localhost:8000/knowledge/namespaces
-# → { "namespaces": ["engineering", "legal", "medical"], "global_entries": 2 }
-```
-
 ### Subscribe to live feed (WebSocket)
 
 ```js
@@ -283,12 +279,12 @@ ws.onmessage = (e) => console.log(JSON.parse(e.data));
 | `agent_id` | string | Submitting agent |
 | `hash` | string | SHA-256 hex of content |
 | `cid` | string? | 0G Storage content identifier |
-| `on_chain` | bool | True after `storeKnowledgeHash` TX |
-| `namespace` | string? | Domain namespace; null = global pool |
-| `trust_score` | float | `1.0 + use_count × 0.1`, capped at 2.0 |
-| `use_count` | int | Times marked as useful |
-| `references` | string[] | knowledge_ids this entry builds upon |
-| `expires_at` | string? | ISO datetime of expiry (from `ttl_days`) |
+| `on_chain` | bool | `true` after `storeKnowledgeHash` TX confirmed |
+| `namespace` | string? | Domain namespace; `null` = global pool |
+| `trust_score` | float | `1.0 + use_count × 0.1`, capped at `2.0` |
+| `use_count` | int | Times marked as useful by consuming agents |
+| `references` | string[] | `knowledge_id`s this entry builds upon |
+| `expires_at` | string? | ISO datetime of expiry (computed from `ttl_days`) |
 
 ---
 
@@ -306,11 +302,11 @@ ws.onmessage = (e) => console.log(JSON.parse(e.data));
 | `USE_ZG_STORAGE` | `false` | Enable real 0G Storage uploads |
 | `ZG_STORAGE_ENDPOINT` | — | 0G Storage node URL |
 | `USE_ZG_CHAIN` | `false` | Enable on-chain hash writes |
-| `ZG_CHAIN_RPC` | — | 0G Chain RPC URL |
-| `ZG_CHAIN_PRIVATE_KEY` | — | Wallet private key for signing TXs |
+| `ZG_CHAIN_RPC` | `https://evmrpc-testnet.0g.ai` | 0G Chain RPC URL |
+| `ZG_CHAIN_PRIVATE_KEY` | — | Wallet private key (with `0x` prefix) |
 | `ZG_KNOWLEDGE_REGISTRY_ADDRESS` | — | Deployed `KnowledgeRegistry` address |
 
-Both `USE_ZG_*` flags default to **false** — the system runs fully in-process with mock values.
+Both `USE_ZG_*` flags default to `false` — the system runs fully in-process with mock values. No API keys required for local development.
 
 ### Frontend (`frontend/.env`)
 
@@ -323,7 +319,7 @@ Both `USE_ZG_*` flags default to **false** — the system runs fully in-process 
 
 ## Smart Contract
 
-`contracts/KnowledgeRegistry.sol` — deployable to 0G Chain testnet.
+`contracts-deploy/contracts/KnowledgeRegistry.sol` — deployed on **0G Chain Galileo Testnet**.
 
 ```solidity
 storeKnowledgeHash(bytes32 hash, string agentId, string knowledgeId, string cid)
@@ -332,7 +328,11 @@ totalEntries() → uint256
 hashAt(uint256 index) → bytes32
 ```
 
-After deploying, set `ZG_KNOWLEDGE_REGISTRY_ADDRESS` in `backend/.env`.
+| Network | Chain ID | Contract Address |
+|---|---|---|
+| 0G Galileo Testnet | 16602 | `0xEf26776f38259079AFf064fC5B23c9D86B1dBD6d` |
+
+Explorer: [chainscan-galileo.0g.ai](https://chainscan-galileo.0g.ai)
 
 ---
 
@@ -341,8 +341,8 @@ After deploying, set `ZG_KNOWLEDGE_REGISTRY_ADDRESS` in `backend/.env`.
 ```bash
 cd backend
 pytest ../tests/backend/ -v                        # all tests
-pytest ../tests/backend/test_services.py -v        # unit tests
-pytest ../tests/backend/test_knowledge_api.py -v   # API integration tests
+pytest ../tests/backend/test_services.py -v        # unit: hashing, embedding, vector store
+pytest ../tests/backend/test_knowledge_api.py -v   # integration: all API endpoints
 pytest ../tests/backend/test_zg_storage.py -v      # 0G storage mock tests
 ```
 
@@ -368,27 +368,29 @@ synapse/
 │   │   │   ├── vector_store.py  # FAISS — search, TTL filtering, mark_useful()
 │   │   │   ├── storage.py       # Pipeline: vector store → 0G Storage → 0G Chain
 │   │   │   ├── zg_storage.py    # 0G Storage node HTTP client
-│   │   │   ├── zg_chain.py      # 0G Chain web3.py client
+│   │   │   ├── zg_chain.py      # 0G Chain web3.py client (EIP-1559)
 │   │   │   └── websocket.py     # ConnectionManager for live feed
 │   │   └── demo/
 │   │       ├── agent_a.py       # Demo: store 5 entries (engineering + medical)
 │   │       └── agent_b.py       # Demo: namespace-isolated queries
-│   └── requirements.txt
+│   ├── requirements.txt
+│   └── .env.example
 ├── frontend/
 │   └── src/
 │       ├── app/
-│       │   ├── page.tsx         # Dashboard + architecture diagram
+│       │   ├── page.tsx         # Landing page + architecture diagram
 │       │   ├── store/           # Store knowledge (namespace, references, TTL)
 │       │   ├── query/           # Query knowledge (namespace isolation)
-│       │   ├── explorer/        # Browse + filter entries (namespace pills)
+│       │   ├── explorer/        # Browse + filter entries
 │       │   └── network/         # Network stats + WebSocket live feed
 │       ├── components/
 │       │   └── KnowledgeCard.tsx  # Card with trust score, useful button, refs, TTL
 │       └── lib/
 │           ├── api.ts           # API client + mock + subscribeToFeed()
-│           └── types.ts         # All TypeScript interfaces
-├── contracts/
-│   └── KnowledgeRegistry.sol
+│           └── types.ts         # TypeScript interfaces
+├── contracts-deploy/
+│   └── contracts/
+│       └── KnowledgeRegistry.sol  # On-chain knowledge registry
 └── tests/
     └── backend/
         ├── test_services.py       # Unit: hashing, embedding, vector store
@@ -416,6 +418,7 @@ synapse/
 ---
 
 ## License
+
 Copyright (c) 2026 Muhammad Indra Kusuma. All rights reserved.
 
-Source code is made available for viewing and evaluation purposes (hackathon judging) only. No use, copying or modification is permitted without explicit written permission from the author.
+Source code is made available for viewing and evaluation purposes (hackathon judging) only. No use, copying, or modification is permitted without explicit written permission from the author.

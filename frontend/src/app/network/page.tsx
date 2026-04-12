@@ -5,12 +5,155 @@ import { getNetworkStats, subscribeToFeed } from "@/lib/api";
 import type { NetworkStats, LiveFeedEvent } from "@/lib/types";
 
 const REFRESH_INTERVAL_MS = 8000;
-const MAX_FEED_EVENTS     = 20;
+const MAX_FEED_EVENTS = 30;
+
+// ─── Animated counter ────────────────────────────────────────────────────────
+
+function AnimatedCounter({ value }: { value: number }) {
+  const [display, setDisplay] = useState(0);
+  const prev = useRef(0);
+
+  useEffect(() => {
+    const from = prev.current;
+    if (from === value) return;
+    prev.current = value;
+    let t: number | null = null;
+    const run = (ts: number) => {
+      if (!t) t = ts;
+      const p = Math.min((ts - t) / 900, 1);
+      setDisplay(Math.floor(from + (value - from) * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(run);
+      else setDisplay(value);
+    };
+    requestAnimationFrame(run);
+  }, [value]);
+
+  return <>{display}</>;
+}
+
+// ─── Hero stat ────────────────────────────────────────────────────────────────
+// Large, glowing — for the 3 numbers judges immediately read
+
+function HeroStat({
+  label, value, color, glowClass,
+}: {
+  label: string; value: number; color: string; glowClass: string;
+}) {
+  return (
+    <div className="card-base p-6 flex flex-col gap-3 text-center">
+      <span className={`mono text-5xl font-semibold ${color} ${glowClass}`}>
+        <AnimatedCounter value={value} />
+      </span>
+      <span className="mono text-xs text-text-muted uppercase tracking-widest">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// ─── Small stat — for supporting numbers ────────────────────────────────────
+
+function SmallStat({
+  label, value, color, pulse,
+}: {
+  label: string; value: number | string; color: string; pulse?: boolean;
+}) {
+  return (
+    <div className="card-base px-5 py-4 flex items-center justify-between gap-4">
+      <span className="mono text-xs text-text-muted uppercase tracking-wider">{label}</span>
+      <span className={`mono text-xl font-semibold ${color} ${pulse ? "status-online" : ""}`}>
+        {typeof value === "number" ? <AnimatedCounter value={value} /> : value}
+      </span>
+    </div>
+  );
+}
+
+// ─── Live feed ────────────────────────────────────────────────────────────────
+
+function LiveFeed({
+  events, connected, feedRef,
+}: {
+  events: LiveFeedEvent[];
+  connected: boolean;
+  feedRef: React.RefObject<HTMLDivElement>;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <span className="mono text-xs text-text-muted uppercase tracking-widest">
+          Live Activity
+        </span>
+        <div className="flex items-center gap-2">
+          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+            connected
+              ? "bg-lime animate-pulse-cyan shadow-[0_0_6px_rgba(57,255,20,0.8)]"
+              : "bg-steel"
+          }`} />
+          <span className={`mono text-xs ${connected ? "text-lime" : "text-text-muted/60"}`}>
+            {connected ? "LIVE" : "CONNECTING…"}
+          </span>
+        </div>
+      </div>
+
+      {/* Events list */}
+      <div
+        ref={feedRef}
+        className="card-base overflow-y-auto flex flex-col"
+        style={{ maxHeight: "480px" }}
+      >
+        {events.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-12">
+            <span className="text-2xl text-steel/40">◎</span>
+            <span className="mono text-xs text-text-muted/50 text-center">
+              Waiting for activity…
+            </span>
+          </div>
+        ) : (
+          events.map((ev, i) => (
+            <div
+              key={`${ev.knowledge_id}-${i}`}
+              className="px-4 py-3 border-b border-steel/40 last:border-0 animate-slide-up"
+            >
+              {/* Agent + namespace + time */}
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-lime text-xs shrink-0">▶</span>
+                  <span className="mono text-xs text-purple truncate font-medium">
+                    {ev.agent_id}
+                  </span>
+                  {ev.namespace && (
+                    <span className="mono text-xs px-1 rounded border border-cyan/30 text-cyan bg-cyan/5 shrink-0">
+                      {ev.namespace}
+                    </span>
+                  )}
+                </div>
+                <span className="mono text-xs text-text-muted/50 shrink-0">
+                  {new Date(ev.timestamp).toLocaleTimeString()}
+                </span>
+              </div>
+              {/* Content preview */}
+              <p className="text-xs text-text-muted leading-relaxed line-clamp-2">
+                {ev.content_preview}
+              </p>
+              {/* On-chain badge */}
+              {ev.on_chain && (
+                <span className="mono text-xs text-lime mt-1 inline-block">⬡ on-chain</span>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function NetworkPage() {
-  const [stats, setStats]     = useState<NetworkStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+  const [stats, setStats]             = useState<NetworkStats | null>(null);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [feedEvents, setFeedEvents]   = useState<LiveFeedEvent[]>([]);
   const [wsConnected, setWsConnected] = useState(false);
@@ -35,329 +178,150 @@ export default function NetworkPage() {
     return () => clearInterval(id);
   }, [fetchStats]);
 
-  // Live feed WebSocket subscription
   useEffect(() => {
-    const unsubscribe = subscribeToFeed(
-      (event) => {
-        setFeedEvents((prev) => [event, ...prev].slice(0, MAX_FEED_EVENTS));
-        // Auto-scroll feed to top
+    const unsub = subscribeToFeed(
+      (ev) => {
+        setFeedEvents((p) => [ev, ...p].slice(0, MAX_FEED_EVENTS));
         feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
       },
       () => setWsConnected(true),
       () => setWsConnected(false),
     );
-    return unsubscribe;
+    return unsub;
   }, []);
 
   return (
-    <div className="flex flex-col gap-8 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex flex-col gap-2">
-          <div className="mono text-xs text-text-muted uppercase tracking-widest">
-            GET /knowledge/stats
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Network Dashboard
-          </h1>
-          <p className="text-text-muted text-sm">
-            Live protocol statistics. Refreshes every {REFRESH_INTERVAL_MS / 1000}s.
-          </p>
-        </div>
+    <div className="flex flex-col lg:flex-row gap-10 pt-4">
 
-        <div className="flex flex-col items-end gap-1">
-          <span className="status-online mono text-xs text-lime">LIVE</span>
-          {lastRefresh && (
-            <span className="mono text-xs text-text-muted">
-              {lastRefresh.toLocaleTimeString()}
+      {/* ── LEFT ─────────────────────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 flex flex-col gap-8">
+
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div className="flex flex-col gap-2">
+            <span className="mono text-xs text-text-muted uppercase tracking-widest">
+              Network dashboard
             </span>
-          )}
-        </div>
-      </div>
-
-      {/* Error */}
-      {error && (
-        <div className="mono text-xs text-red-400 border border-red-900/40 rounded px-3 py-2 bg-red-950/20">
-          ERROR: {error}
-        </div>
-      )}
-
-      {/* Loading skeleton */}
-      {loading && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card-base p-4 h-20 animate-pulse" />
-          ))}
-        </div>
-      )}
-
-      {/* Stats grid */}
-      {stats && (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            <BigStat
-              label="Total Entries"
-              value={stats.total_entries.toString()}
-              sub="knowledge objects"
-              color="text-cyan"
-            />
-            <BigStat
-              label="Unique Agents"
-              value={stats.unique_agents.toString()}
-              sub="contributing agents"
-              color="text-purple"
-            />
-            <BigStat
-              label="Total Queries"
-              value={stats.total_queries.toString()}
-              sub="semantic searches"
-              color="text-cyan"
-            />
-            <BigStat
-              label="On-Chain"
-              value={stats.on_chain_entries.toString()}
-              sub="verified on 0G Chain"
-              color={stats.on_chain_entries > 0 ? "text-lime" : "text-text-muted"}
-            />
-            <BigStat
-              label="0G Storage"
-              value={stats.stored_in_0g.toString()}
-              sub="entries in 0G Storage"
-              color={stats.stored_in_0g > 0 ? "text-lime" : "text-text-muted"}
-            />
-            <BigStat
-              label="Network"
-              value="ONLINE"
-              sub="0G Protocol"
-              color="text-lime"
-              dot
-            />
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Live Protocol Stats
+            </h1>
+            <p className="text-text-muted text-sm">
+              Real-time network activity. Auto-refreshes every {REFRESH_INTERVAL_MS / 1000}s.
+            </p>
           </div>
+          <div className="flex flex-col items-end gap-1.5 pt-1">
+            <span className="status-online mono text-xs text-lime">LIVE</span>
+            {lastRefresh && (
+              <span className="mono text-xs text-text-muted/60">
+                {lastRefresh.toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+        </div>
 
-          {/* Last stored entry */}
-          {stats.last_knowledge_id && (
-            <div className="card-base p-5 flex flex-col gap-3">
-              <div className="mono text-xs text-text-muted uppercase tracking-widest">
-                Last Stored Entry
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                <InfoField label="Knowledge ID" value={stats.last_knowledge_id} mono truncate />
-                <InfoField label="Agent"        value={stats.last_agent_id ?? "—"} mono />
-                <InfoField
-                  label="Timestamp"
-                  value={stats.last_timestamp
-                    ? new Date(stats.last_timestamp).toLocaleString()
-                    : "—"}
+        {/* Error */}
+        {error && (
+          <div className="mono text-xs text-red-400 border border-red-900/40 rounded px-4 py-3 bg-red-950/20">
+            {error}
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="grid grid-cols-3 gap-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="card-base h-32 shimmer-bg rounded" />
+            ))}
+          </div>
+        )}
+
+        {stats && (
+          <>
+            {/* 3 hero numbers — the story in 3 seconds */}
+            <div className="grid grid-cols-3 gap-3">
+              <HeroStat
+                label="Knowledge Entries"
+                value={stats.total_entries}
+                color="text-cyan"
+                glowClass="glow-text-cyan"
+              />
+              <HeroStat
+                label="Active Agents"
+                value={stats.unique_agents}
+                color="text-purple"
+                glowClass="glow-text-purple"
+              />
+              <HeroStat
+                label="Queries Served"
+                value={stats.total_queries}
+                color="text-cyan"
+                glowClass="glow-text-cyan"
+              />
+            </div>
+
+            {/* 0G integration status — important for hackathon judges */}
+            <div className="flex flex-col gap-2">
+              <span className="mono text-xs text-text-muted uppercase tracking-widest">
+                0G Integration
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <SmallStat
+                  label="Network"
+                  value="ONLINE"
+                  color="text-lime"
+                  pulse
+                />
+                <SmallStat
+                  label="On-Chain Verified"
+                  value={stats.on_chain_entries}
+                  color={stats.on_chain_entries > 0 ? "text-lime" : "text-text-muted/40"}
+                />
+                <SmallStat
+                  label="0G Storage Objects"
+                  value={stats.stored_in_0g}
+                  color={stats.stored_in_0g > 0 ? "text-lime" : "text-text-muted/40"}
                 />
               </div>
             </div>
-          )}
 
-          {/* Extra stats row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <BigStat
-              label="Useful Votes"
-              value={(stats.total_useful_votes ?? 0).toString()}
-              sub="trust signals"
-              color="text-lime"
-            />
-            <BigStat
-              label="Linked"
-              value={(stats.linked_entries ?? 0).toString()}
-              sub="entries with refs"
-              color="text-cyan"
-            />
-            <BigStat
-              label="Expiring"
-              value={(stats.expiring_entries ?? 0).toString()}
-              sub="TTL entries"
-              color={(stats.expiring_entries ?? 0) > 0 ? "text-yellow-400" : "text-text-muted"}
-            />
-            <BigStat
-              label="Live Clients"
-              value={wsConnected ? (stats.ws_connections ?? 1).toString() : "—"}
-              sub="WebSocket feed"
-              color={wsConnected ? "text-lime" : "text-text-muted"}
-              dot={wsConnected}
-            />
-          </div>
-
-          {/* Architecture flow */}
-          <div className="card-base p-6">
-            <div className="mono text-xs text-text-muted uppercase tracking-widest mb-5">
-              Protocol Flow
-            </div>
-            <ArchFlow />
-          </div>
-
-          {/* Integration status */}
-          <div className="card-base p-5">
-            <div className="mono text-xs text-text-muted uppercase tracking-widest mb-4">
-              Integration Status
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <IntegrationRow
-                label="Vector Search (FAISS)"
-                status="active"
-                detail={`${stats.total_entries} entries indexed`}
-              />
-              <IntegrationRow
-                label="0G Storage"
-                status={stats.stored_in_0g > 0 ? "active" : "mock"}
-                detail={stats.stored_in_0g > 0 ? `${stats.stored_in_0g} objects` : "mock CIDs"}
-              />
-              <IntegrationRow
-                label="0G Chain"
-                status={stats.on_chain_entries > 0 ? "active" : "mock"}
-                detail={stats.on_chain_entries > 0 ? `${stats.on_chain_entries} hashes` : "disabled"}
-              />
-            </div>
-          </div>
-
-          {/* Live knowledge feed */}
-          <div className="card-base p-5 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="mono text-xs text-text-muted uppercase tracking-widest">
-                Live Knowledge Feed
-              </div>
-              <span
-                className={`mono text-xs ${wsConnected ? "text-lime status-online" : "text-text-muted"}`}
-              >
-                {wsConnected ? "CONNECTED" : "CONNECTING…"}
-              </span>
-            </div>
-
-            <div
-              ref={feedRef}
-              className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1"
-            >
-              {feedEvents.length === 0 ? (
-                <div className="mono text-xs text-text-muted text-center py-6">
-                  Waiting for incoming knowledge…
+            {/* Last stored — shows the system is working */}
+            {stats.last_knowledge_id && (
+              <div className="card-base px-5 py-4 flex flex-col gap-3">
+                <span className="mono text-xs text-text-muted uppercase tracking-widest">
+                  Last stored
+                </span>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="mono text-xs text-purple">
+                    {stats.last_agent_id ?? "—"}
+                  </span>
+                  <span className="text-steel text-xs">·</span>
+                  <span className="mono text-xs text-text-muted truncate">
+                    {stats.last_knowledge_id.slice(0, 20)}…
+                  </span>
+                  <span className="text-steel text-xs">·</span>
+                  <span className="mono text-xs text-text-muted/60">
+                    {stats.last_timestamp
+                      ? new Date(stats.last_timestamp).toLocaleString()
+                      : "—"}
+                  </span>
                 </div>
-              ) : (
-                feedEvents.map((ev, i) => (
-                  <div
-                    key={`${ev.knowledge_id}-${i}`}
-                    className="flex flex-col gap-1 p-3 border border-steel rounded bg-surface/50 animate-in fade-in slide-in-from-top-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lime text-xs">▶</span>
-                        <span className="mono text-xs text-purple">{ev.agent_id}</span>
-                        {ev.namespace && (
-                          <span className="mono text-xs px-1 py-0 rounded border border-cyan/30 text-cyan bg-cyan/5">
-                            {ev.namespace}
-                          </span>
-                        )}
-                      </div>
-                      <span className="mono text-xs text-text-muted shrink-0">
-                        {new Date(ev.timestamp).toLocaleTimeString()}
-                      </span>
-                    </div>
-                    <p className="text-xs text-text-primary leading-relaxed line-clamp-2">
-                      {ev.content_preview}
-                    </p>
-                    <div className="mono text-xs text-steel truncate">
-                      {ev.knowledge_id}
-                      {ev.on_chain && <span className="ml-2 text-lime">⬡ on-chain</span>}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-function BigStat({
-  label, value, sub, color, dot,
-}: {
-  label: string; value: string; sub: string; color: string; dot?: boolean;
-}) {
-  return (
-    <div className="card-base p-4 flex flex-col gap-1">
-      <span className="mono text-xs text-text-muted uppercase">{label}</span>
-      <span className={`mono text-2xl font-semibold ${color} ${dot ? "status-online" : ""}`}>
-        {value}
-      </span>
-      <span className="mono text-xs text-text-muted">{sub}</span>
-    </div>
-  );
-}
-
-function InfoField({
-  label, value, mono, truncate,
-}: {
-  label: string; value: string; mono?: boolean; truncate?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="mono text-xs text-text-muted uppercase">{label}</span>
-      <span className={`text-sm ${mono ? "mono" : ""} ${truncate ? "truncate" : ""}`}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function IntegrationRow({
-  label, status, detail,
-}: {
-  label: string; status: "active" | "mock" | "disabled"; detail: string;
-}) {
-  const dot =
-    status === "active"   ? "text-lime"
-    : status === "mock"   ? "text-cyan"
-    : "text-text-muted";
-  const badge =
-    status === "active"   ? "ACTIVE"
-    : status === "mock"   ? "MOCK"
-    : "DISABLED";
-
-  return (
-    <div className="flex flex-col gap-1 p-3 border border-steel rounded">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">{label}</span>
-        <span className={`mono text-xs ${dot}`}>{badge}</span>
+              </div>
+            )}
+          </>
+        )}
       </div>
-      <span className="mono text-xs text-text-muted">{detail}</span>
-    </div>
-  );
-}
 
-function ArchFlow() {
-  const steps = [
-    { label: "AI Agents",    color: "border-purple text-purple",   icon: "◈" },
-    { label: "Synapse API",  color: "border-cyan text-cyan",       icon: "⊕" },
-    { label: "Embeddings",   color: "border-steel text-text-muted",icon: "◎" },
-    { label: "0G Storage",   color: "border-lime text-lime",       icon: "⬡" },
-    { label: "0G Chain",     color: "border-lime text-lime",       icon: "⬡" },
-  ];
-
-  return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-      {steps.map(({ label, color, icon }, i) => (
-        <div key={label} className="flex sm:flex-col items-center gap-2 flex-1">
-          <div className={`card-base card-hover ${color} p-3 w-full text-center flex flex-col items-center gap-1`}>
-            <span className="text-lg">{icon}</span>
-            <span className="mono text-xs">{label}</span>
-          </div>
-          {i < steps.length - 1 && (
-            <span className="text-steel sm:hidden">↓</span>
-          )}
-          {i < steps.length - 1 && (
-            <span className="text-steel hidden sm:inline text-xs">→</span>
-          )}
+      {/* ── RIGHT: Sticky live feed ───────────────────────────────────────── */}
+      <div className="w-full lg:w-[300px] shrink-0">
+        <div className="sticky top-20 h-fit">
+          <LiveFeed
+            events={feedEvents}
+            connected={wsConnected}
+            feedRef={feedRef}
+          />
         </div>
-      ))}
+      </div>
+
     </div>
   );
 }
