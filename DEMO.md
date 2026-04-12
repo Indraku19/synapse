@@ -1,51 +1,48 @@
 # Synapse — Demo Guide
 
-**Tidak perlu API key. Tidak perlu akun 0G.** Semua integrasi 0G berjalan dalam mode mock secara default.
+**No API keys required. No 0G account needed.** All 0G integrations run in mock mode by default.
 
 ---
 
-## Prasyarat
+## Prerequisites
 
-- Python 3.11+
+- Python 3.12
 - Node.js 18+
 - pip
 
 ---
 
-## Opsi A — Full Stack (Backend + Frontend)
+## Option A — Full Stack (Backend + Frontend)
 
-Demo ini menunjukkan UI lengkap dengan koneksi WebSocket live feed.
+Shows the complete UI with WebSocket live feed connected to the backend.
 
-### Langkah 1 — Setup Backend
+### Step 1 — Backend Setup
 
 ```bash
-
-  brew install python@3.12
-  cd synapse/backend
-  rm -rf .venv
-  python3.12 -m venv .venv
-  source .venv/bin/activate
-  pip install -r requirements.txt
-
+brew install python@3.12
+cd synapse/backend
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-Buat file `.env` dari contoh:
+Create the `.env` file from the example:
 
 ```bash
 cp .env.example .env
 ```
 
-> File `.env` sudah berisi `USE_ZG_STORAGE=false` dan `USE_ZG_CHAIN=false`. Tidak perlu diubah.
+> The `.env` file already has `USE_ZG_STORAGE=false` and `USE_ZG_CHAIN=false`. No changes needed for local demo.
 
-### Langkah 2 — Jalankan Backend
+### Step 2 — Start Backend
 
-> Pastikan venv aktif (ada `(.venv)` di prompt). Jika buka terminal baru: `source .venv/bin/activate`
+> Make sure the venv is active (`(.venv)` appears in your prompt). If you open a new terminal: `source .venv/bin/activate`
 
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Tunggu hingga muncul log:
+Wait until you see:
 
 ```
 Synapse API v0.2.0 starting up.
@@ -53,42 +50,42 @@ Synapse API v0.2.0 starting up.
 WebSocket live feed: ws://0.0.0.0:8000/ws/feed
 ```
 
-Swagger UI tersedia di: http://localhost:8000/docs
+Swagger UI: http://localhost:8000/docs
 
-### Langkah 3 — Setup Frontend
+### Step 3 — Frontend Setup
 
-Buka terminal baru:
+Open a new terminal:
 
 ```bash
 cd synapse/frontend
 npm install
 ```
 
-Buat file `.env.local`:
+Create `.env.local`:
 
 ```bash
 echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
 echo "NEXT_PUBLIC_USE_MOCK=false" >> .env.local
 ```
 
-### Langkah 4 — Jalankan Frontend
+### Step 4 — Start Frontend
 
 ```bash
 npm run dev
 ```
 
-Buka browser: http://localhost:3000
+Open browser: http://localhost:3000
 
-### Langkah 5 — Jalankan Demo Cross-Agent
+### Step 5 — Run Cross-Agent Demo
 
-Buka terminal ketiga:
+Open a third terminal:
 
 ```bash
 cd synapse/backend
 python -m app.demo.agent_a
 ```
 
-Agent A menyimpan 5 knowledge entries (3 `engineering`, 2 `medical`). Output yang diharapkan:
+Agent A stores 5 knowledge entries (3 `engineering`, 2 `medical`). Expected output:
 
 ```
 ══════════════════════════════════════════════════════
@@ -107,36 +104,36 @@ Agent A menyimpan 5 knowledge entries (3 `engineering`, 2 `medical`). Output yan
   ...
 ```
 
-> Di halaman **Network** pada frontend, event baru akan muncul di live feed secara real-time via WebSocket.
+> On the **Network** page in the frontend, new events will appear in the live feed in real-time via WebSocket.
 
-Buka terminal keempat:
+Open a fourth terminal:
 
 ```bash
 cd synapse/backend
 python -m app.demo.agent_b
 ```
 
-Agent B menjalankan 4 query, mendemonstrasikan namespace isolation:
+Agent B runs 4 queries, demonstrating namespace isolation:
 
-| Query | Namespace | Hasil |
+| Query | Namespace | Expected Result |
 |---|---|---|
-| "race condition nonce" | global | Mengembalikan hasil dari semua domain |
-| "drug interaction medication" | `medical` | Hanya hasil medis |
-| "drug interaction medication" | `engineering` | **Tidak ada hasil** — konteks terisolasi |
-| "performance optimization latency" | `engineering` | Hanya hasil engineering |
+| "race condition nonce" | global | Returns results from all domains |
+| "drug interaction medication" | `medical` | Medical results only |
+| "drug interaction medication" | `engineering` | No medical results — context isolated |
+| "performance optimization latency" | `engineering` | Engineering results only |
 
 ---
 
-## Opsi B — Frontend Saja (Tanpa Backend)
+## Option B — Frontend Only (No Backend)
 
-Cocok jika hanya ingin melihat UI.
+Useful if you only want to see the UI.
 
 ```bash
 cd synapse/frontend
 npm install
 ```
 
-Buat `.env.local`:
+Create `.env.local`:
 
 ```bash
 echo "NEXT_PUBLIC_USE_MOCK=true" > .env.local
@@ -146,26 +143,26 @@ echo "NEXT_PUBLIC_USE_MOCK=true" > .env.local
 npm run dev
 ```
 
-Buka: http://localhost:3000
+Open: http://localhost:3000
 
-UI akan menggunakan mock data bawaan. Live feed juga berjalan (simulasi event setiap 8–15 detik).
+The UI uses built-in mock data. The live feed also runs (simulates events every 8–15 seconds).
 
 ---
 
-## Opsi C — Backend API Saja (via curl / Swagger)
+## Option C — Backend API Only (via curl / Swagger)
 
-Jika hanya ingin menguji API tanpa frontend.
+For testing the API without the frontend.
 
 ```bash
 cd synapse/backend
-python3 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 uvicorn app.main:app --reload
 ```
 
-### Simpan knowledge
+### Store knowledge
 
 ```bash
 curl -X POST http://localhost:8000/knowledge \
@@ -178,7 +175,7 @@ curl -X POST http://localhost:8000/knowledge \
   }'
 ```
 
-### Query dengan namespace isolation
+### Query with namespace isolation
 
 ```bash
 curl -X POST http://localhost:8000/knowledge/query \
@@ -186,25 +183,25 @@ curl -X POST http://localhost:8000/knowledge/query \
   -d '{"query": "race condition nonce", "top_k": 3, "namespace": "engineering"}'
 ```
 
-### Tandai sebagai useful (trust vote)
+### Mark as useful (trust vote)
 
 ```bash
 curl -X POST http://localhost:8000/knowledge/<knowledge_id>/useful
 ```
 
-### Lihat statistik jaringan
+### Get network stats
 
 ```bash
 curl http://localhost:8000/knowledge/stats
 ```
 
-### Lihat daftar namespace
+### List namespaces
 
 ```bash
 curl http://localhost:8000/knowledge/namespaces
 ```
 
-### Cek health
+### Health check
 
 ```bash
 curl http://localhost:8000/health
@@ -212,16 +209,16 @@ curl http://localhost:8000/health
 
 ---
 
-## Opsi D — MCP Server (Untuk Agent Claude)
+## Option D — MCP Server (For Claude / MCP Agents)
 
-Memungkinkan Claude atau MCP-compatible agent menggunakan Synapse sebagai native tool.
+Exposes Synapse as native tools for Claude or any MCP-compatible agent.
 
 ```bash
 cd synapse/backend
 python -m app.mcp_server --api-url http://localhost:8000
 ```
 
-Tambahkan ke `~/.claude/mcp_servers.json`:
+Add to `~/.claude/mcp_servers.json`:
 
 ```json
 {
@@ -233,11 +230,11 @@ Tambahkan ke `~/.claude/mcp_servers.json`:
 }
 ```
 
-Tools yang tersedia: `synapse_store`, `synapse_query`, `synapse_namespaces`, `synapse_stats`, `synapse_mark_useful`, `synapse_get_links`.
+Available tools: `synapse_store`, `synapse_query`, `synapse_namespaces`, `synapse_stats`, `synapse_mark_useful`, `synapse_get_links`.
 
 ---
 
-## Jalankan Tests
+## Run Tests
 
 ```bash
 cd synapse/backend
@@ -246,17 +243,17 @@ pytest ../tests/backend/ -v
 
 ---
 
-## Catatan Mode Mock
+## Mock Mode Reference
 
-| Komponen | Mode Default | Perilaku |
+| Component | Default Mode | Behavior |
 |---|---|---|
-| 0G Storage | **Mock** | CID dihasilkan secara lokal: `zg:<sha256>` |
-| 0G Chain | **Mock** | `on_chain: false`, tidak ada transaksi nyata |
-| Embedding | Real (download otomatis) | `all-MiniLM-L6-v2` diunduh saat pertama kali dijalankan (~90 MB) |
-| FAISS | Real | Vector search berjalan sepenuhnya in-process |
-| WebSocket | Real | Live feed berjalan secara lokal |
+| 0G Storage | **Mock** | CID generated locally: `zg:<sha256>` |
+| 0G Chain | **Mock** | `on_chain: false`, no real transactions |
+| Embedding | Real (auto-download) | `all-MiniLM-L6-v2` downloaded on first run (~90 MB) |
+| FAISS | Real | Vector search runs fully in-process |
+| WebSocket | Real | Live feed runs locally |
 
-Untuk mengaktifkan integrasi 0G yang sesungguhnya, ubah di `backend/.env`:
+To enable real 0G integrations, update `backend/.env`:
 
 ```env
 USE_ZG_STORAGE=true
@@ -265,5 +262,5 @@ ZG_STORAGE_ENDPOINT=http://your-0g-node:5678
 USE_ZG_CHAIN=true
 ZG_CHAIN_RPC=https://evmrpc-testnet.0g.ai
 ZG_CHAIN_PRIVATE_KEY=0xYOUR_PRIVATE_KEY
-ZG_KNOWLEDGE_REGISTRY_ADDRESS=0xYOUR_CONTRACT_ADDRESS
+ZG_KNOWLEDGE_REGISTRY_ADDRESS=0xEf26776f38259079AFf064fC5B23c9D86B1dBD6d
 ```
