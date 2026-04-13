@@ -1,0 +1,11 @@
+{
+  "name": "zg-upload",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "0G Storage upload helper for Synapse backend",
+  "main": "upload.mjs",
+  "dependencies": {
+    "@0gfoundation/0g-ts-sdk": "^1.2.1",
+    "ethers": "^6.0.0"
+  }
+}

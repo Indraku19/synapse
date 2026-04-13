@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     # 0G Storage (Phase 2)
     use_zg_storage: bool = False
-    zg_storage_endpoint: str = ""      # e.g. http://storage-node:5678
+    zg_storage_endpoint: str = "https://indexer-storage-testnet-turbo.0g.ai"
 
     # 0G Chain (Phase 2)
     use_zg_chain: bool = False

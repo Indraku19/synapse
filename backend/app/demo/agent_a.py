@@ -121,7 +121,7 @@ def run():
                     "source":    entry["source"],
                     "namespace": entry.get("namespace"),
                 },
-                timeout=15.0,
+                timeout=180.0,
             )
             resp.raise_for_status()
             data = resp.json()

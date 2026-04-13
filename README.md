@@ -367,12 +367,15 @@ synapse/
 │   │   │   ├── hashing.py       # SHA-256 hash_content() + verify_hash()
 │   │   │   ├── vector_store.py  # FAISS — search, TTL filtering, mark_useful()
 │   │   │   ├── storage.py       # Pipeline: vector store → 0G Storage → 0G Chain
-│   │   │   ├── zg_storage.py    # 0G Storage node HTTP client
+│   │   │   ├── zg_storage.py    # 0G Storage client — calls zg_upload/upload.mjs
 │   │   │   ├── zg_chain.py      # 0G Chain web3.py client (EIP-1559)
 │   │   │   └── websocket.py     # ConnectionManager for live feed
 │   │   └── demo/
 │   │       ├── agent_a.py       # Demo: store 5 entries (engineering + medical)
 │   │       └── agent_b.py       # Demo: namespace-isolated queries
+│   ├── zg_upload/
+│   │   ├── upload.mjs           # Node.js upload helper using @0gfoundation/0g-ts-sdk
+│   │   └── package.json         # Dependencies: 0g-ts-sdk + ethers
 │   ├── requirements.txt
 │   └── .env.example
 ├── frontend/

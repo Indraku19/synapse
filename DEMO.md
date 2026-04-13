@@ -26,6 +26,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+Install the 0G Storage upload helper dependencies:
+
+```bash
+cd zg_upload && npm install && cd ..
+```
+
 Create the `.env` file from the example:
 
 ```bash
