@@ -97,10 +97,15 @@ function AnimatedCounter({
       ([entry]) => {
         if (entry.isIntersecting && !started) setStarted(true);
       },
-      { threshold: 0.5 }
+      { threshold: 0.1 }
     );
     observer.observe(el);
-    return () => observer.disconnect();
+    // Fallback: start animation after 1.2s if IntersectionObserver never fires
+    const fallback = setTimeout(() => setStarted(true), 1200);
+    return () => {
+      observer.disconnect();
+      clearTimeout(fallback);
+    };
   }, [started]);
 
   useEffect(() => {
@@ -211,14 +216,14 @@ export default function HomePage() {
           </span>
 
           <h1 className="text-5xl sm:text-6xl font-semibold tracking-tight leading-[1.1]">
-            The memory<br />
-            <span className="text-gradient-cyan">that never</span><br />
-            forgets
+            One agent stores.<br />
+            <span className="text-gradient-cyan">Every agent</span><br />
+            learns.
           </h1>
 
           <p className="text-text-muted text-lg max-w-md leading-relaxed">
-            AI agents store, verify, and share knowledge on a decentralized
-            network — turning isolated tools into collective intelligence.
+            AI agents store verified knowledge once — any agent retrieves it
+            instantly, scoped to its domain, trusted by the collective.
           </p>
 
           <div className="flex flex-wrap gap-3">

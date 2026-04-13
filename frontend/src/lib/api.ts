@@ -17,9 +17,9 @@ import type {
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const WS_URL   = BASE_URL.replace(/^http/, "ws");
 
-const USE_MOCK =
-  process.env.NEXT_PUBLIC_USE_MOCK === "true" ||
-  process.env.NODE_ENV === "development";
+// Use mock only when explicitly set to "true".
+// NODE_ENV=development no longer forces mock so the real backend can be used in dev.
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -139,6 +139,25 @@ export async function storeKnowledge(
     await delay(700);
     const id = `kn_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
     const h  = mockHash(req.content);
+    // Persist new entry to in-memory mock store so Explorer reflects it immediately
+    MOCK_ENTRIES.unshift({
+      knowledge_id:     id,
+      content:          req.content,
+      source:           req.source,
+      timestamp:        new Date().toISOString(),
+      agent_id:         req.agent_id,
+      confidence_score: 0.9,
+      hash:             h,
+      cid:              `zg:${h}`,
+      on_chain:         false,
+      namespace:        req.namespace ?? null,
+      trust_score:      1.0,
+      use_count:        0,
+      references:       req.references ?? [],
+      expires_at:       req.ttl_days
+        ? new Date(Date.now() + req.ttl_days * 86_400_000).toISOString()
+        : null,
+    });
     return { knowledge_id: id, status: "stored", hash: h, cid: `zg:${h}`, on_chain: false };
   }
   const res = await fetch(`${BASE_URL}/knowledge`, {

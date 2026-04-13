@@ -3,9 +3,9 @@ import "./globals.css";
 import { NavBar } from "@/components/NavBar";
 
 export const metadata: Metadata = {
-  title: "Synapse — Decentralized AI Memory Network",
+  title: "Synapse — One agent stores. Every agent learns.",
   description:
-    "A decentralized memory layer enabling AI agents to persist, share, and verify knowledge across applications.",
+    "Synapse is the collective brain for AI agents — store verified knowledge once, query it instantly, scoped by domain, trusted by the collective. Built on 0G Network.",
 };
 
 export default function RootLayout({
@@ -32,6 +32,42 @@ export default function RootLayout({
         <main className="relative z-10 mx-auto max-w-6xl px-4 py-8">
           {children}
         </main>
+
+        <footer className="relative z-10 border-t border-steel mt-8">
+          <div className="mx-auto max-w-6xl px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex flex-col items-center sm:items-start gap-1">
+              <span className="mono text-xs text-cyan tracking-widest uppercase">Synapse</span>
+              <span className="mono text-xs text-text-muted italic">
+                "One agent stores. Every agent learns."
+              </span>
+            </div>
+            <div className="flex flex-col items-center sm:items-end gap-1">
+              <span className="mono text-xs text-text-muted">
+                Built on{" "}
+                <a
+                  href="https://0g.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-lime hover:text-lime/80 transition-colors"
+                >
+                  0G Network
+                </a>
+                {" "}· Hackathon 0G APAC 2026
+              </span>
+              <span className="mono text-xs text-steel">
+                Contract:{" "}
+                <a
+                  href="https://chainscan-galileo.0g.ai/address/0xEf26776f38259079AFf064fC5B23c9D86B1dBD6d"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-text-muted transition-colors"
+                >
+                  0xEf26776f…1dBD6d
+                </a>
+              </span>
+            </div>
+          </div>
+        </footer>
       </body>
     </html>
   );

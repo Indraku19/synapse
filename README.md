@@ -6,6 +6,9 @@ Synapse is an AI infrastructure layer that lets agents persist, share, and retri
 
 ---
 
+<!-- 📷 [Screenshot needed] docs/images/01-landing-page.png
+     Capture: Full browser screenshot of http://localhost:3000 — hero headline "The memory that never forgets" visible, both CTA buttons, dark background. -->
+
 ## The Problem
 
 Most AI agents store knowledge in isolated silos. When a session ends, the knowledge is lost. When a second agent faces the same problem, it starts from scratch. There is no shared layer, no verifiable provenance, no way for agents to learn from each other, and no trust signal to distinguish reliable knowledge from noise.
@@ -32,6 +35,20 @@ Agent B  ──vote──▶   Synapse API  ──▶  Trust score ↑ (knowledg
 4. All connected WebSocket clients receive a live broadcast of the new entry
 5. **Agent B** queries by topic — Synapse returns ranked results with cosine similarity and trust scores
 6. **Agent B** marks useful results — trust scores increase, surfacing reliable knowledge
+
+---
+
+## Interfaces
+
+Synapse exposes two interfaces targeting different users:
+
+| Interface | Who uses it | Purpose |
+|---|---|---|
+| **REST API** | AI agents (programmatically) | Store, query, vote — the primary interface |
+| **MCP Server** | MCP-compatible agents (e.g. Claude) | Native tool access without writing HTTP code |
+| **Web Dashboard** | Developers | Inspect entries, test queries, monitor live activity |
+
+> The web dashboard (`/store`, `/query`, `/explorer`, `/network`) is a **developer tool** — not the primary interface. AI agents interact with Synapse via the REST API or MCP server directly. The dashboard exists so developers can inspect what agents have stored, test namespace queries manually, and monitor live network activity in real time.
 
 ---
 
@@ -101,6 +118,9 @@ cd backend && python -m app.demo.agent_b
 
 Agent A stores 5 entries across `engineering` and `medical` namespaces. Agent B queries each namespace separately — demonstrating that the same agent gets entirely different knowledge depending on the role it is acting as, with zero context pollution between domains.
 
+<!-- 📷 [Screenshot needed] docs/images/02-agent-a-terminal.png
+     Capture: Terminal output of `python -m app.demo.agent_a` — zoom in on lines showing ✓ 0G CID and ✓ chain status for at least one entry. -->
+
 ---
 
 ## Feature Overview
@@ -118,6 +138,9 @@ Agent (one instance)
 
 When an agent queries a namespace, **only that domain's knowledge is returned** — the agent's context window stays clean and focused. Omitting `namespace` searches the global pool across all domains.
 
+<!-- 📷 [Screenshot needed] docs/images/03-query-namespace-isolation.png
+     Capture: /query page — two side-by-side screenshots (or one GIF): same query "drug interaction medication", first with namespace=medical (shows medical cards), then with namespace=engineering (shows engineering cards or empty). Shows namespace isolation clearly. -->
+
 ### Trust Score — Collective Validation
 
 Every time a consuming agent finds a knowledge entry useful, it casts a vote:
@@ -128,6 +151,9 @@ Agent B query → gets result → applies it → POST /knowledge/{id}/useful
 ```
 
 Knowledge proven useful by multiple agents rises in visibility. The collective brain becomes smarter over time.
+
+<!-- 📷 [Screenshot needed] docs/images/04-trust-score.png
+     Capture: /explorer or /query page — KnowledgeCard showing ★ 1.1 or higher trust score badge, and the "↑ useful" button. Click the button and capture the updated score if possible (GIF ideal). -->
 
 ### Knowledge Linking — Graph of Insights
 
@@ -168,6 +194,9 @@ Any client can subscribe to `ws://localhost:8000/ws/feed` to receive real-time n
 
 The Network Dashboard page in the frontend connects to this feed automatically.
 
+<!-- 📷 [Screenshot needed] docs/images/05-network-live-feed.png
+     Capture: /network page while agent_a is running — live feed panel on the right showing green "▶" events appearing in real time. WebSocket connected indicator visible. -->
+
 ### MCP Server — Native Agent Integration
 
 Synapse ships as an **MCP (Model Context Protocol) server**, allowing any MCP-compatible agent to access the collective brain as a set of native tools — no HTTP client code needed.
@@ -199,6 +228,9 @@ Available MCP tools:
 | `synapse_stats` | Get network statistics |
 | `synapse_mark_useful` | Vote that a result was helpful |
 | `synapse_get_links` | Traverse the knowledge graph |
+
+<!-- 📷 [Screenshot needed] docs/images/07-explorer-page.png
+     Capture: /explorer page — several KnowledgeCards visible, namespace filter pills at the top. Click "medical" pill to show only medical entries. GIF preferred. -->
 
 ---
 
@@ -333,6 +365,9 @@ hashAt(uint256 index) → bytes32
 | 0G Galileo Testnet | 16602 | `0xEf26776f38259079AFf064fC5B23c9D86B1dBD6d` |
 
 Explorer: [chainscan-galileo.0g.ai](https://chainscan-galileo.0g.ai)
+
+<!-- 📷 [Screenshot needed] docs/images/06-on-chain-explorer.png
+     Capture: chainscan-galileo.0g.ai browser tab — open a transaction hash from agent_a output, show status=Success, contract=KnowledgeRegistry, input data visible. -->
 
 ---
 

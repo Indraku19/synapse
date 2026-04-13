@@ -50,10 +50,21 @@ export default function ExplorerPage() {
   const [nsFilter, setNsFilter] = useState<string | null>(null);
 
   useEffect(() => {
-    listKnowledge()
-      .then(setEntries)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    const fetchWithRetry = async (attempts = 3, delayMs = 1500): Promise<void> => {
+      try {
+        const data = await listKnowledge();
+        setEntries(data);
+      } catch (e) {
+        if (attempts > 1) {
+          await new Promise((r) => setTimeout(r, delayMs));
+          return fetchWithRetry(attempts - 1, delayMs * 1.5);
+        }
+        setError(e instanceof Error ? e.message : "Failed to fetch");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWithRetry();
   }, []);
 
   const allNamespaces = [

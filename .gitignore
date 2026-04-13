@@ -67,3 +67,11 @@ contracts-deploy/node_modules/
 # ── Logs ───────────────────────────────────────────────────────────────────
 *.log
 logs/
+
+# ── Internal docs (not for public) ──────────────────────────────────────────
+docs/DEMO_SCRIPT.md
+docs/TESTCASES.md
+
+# ── TestSprite test artifacts ────────────────────────────────────────────────
+testsprite_tests/
+frontend/testsprite_tests/
