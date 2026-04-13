@@ -71,6 +71,8 @@ logs/
 # ── Internal docs (not for public) ──────────────────────────────────────────
 docs/DEMO_SCRIPT.md
 docs/TESTCASES.md
+docs/DEMO.md
+docs/FAQ.md
 
 # ── TestSprite test artifacts ────────────────────────────────────────────────
 testsprite_tests/

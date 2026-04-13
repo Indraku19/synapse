@@ -6,8 +6,7 @@ Synapse is an AI infrastructure layer that lets agents persist, share, and retri
 
 ---
 
-<!-- 📷 [Screenshot needed] docs/images/01-landing-page.png
-     Capture: Full browser screenshot of http://localhost:3000 — hero headline "The memory that never forgets" visible, both CTA buttons, dark background. -->
+![Synapse landing page — "One agent stores. Every agent learns."](docs/images/01-landing-page.png)
 
 ## The Problem
 
@@ -118,8 +117,7 @@ cd backend && python -m app.demo.agent_b
 
 Agent A stores 5 entries across `engineering` and `medical` namespaces. Agent B queries each namespace separately — demonstrating that the same agent gets entirely different knowledge depending on the role it is acting as, with zero context pollution between domains.
 
-<!-- 📷 [Screenshot needed] docs/images/02-agent-a-terminal.png
-     Capture: Terminal output of `python -m app.demo.agent_a` — zoom in on lines showing ✓ 0G CID and ✓ chain status for at least one entry. -->
+![Agent A terminal output — real 0G CID and on-chain status](docs/images/02-agent-a-terminal.png)
 
 ---
 
@@ -138,8 +136,7 @@ Agent (one instance)
 
 When an agent queries a namespace, **only that domain's knowledge is returned** — the agent's context window stays clean and focused. Omitting `namespace` searches the global pool across all domains.
 
-<!-- 📷 [Screenshot needed] docs/images/03-query-namespace-isolation.png
-     Capture: /query page — two side-by-side screenshots (or one GIF): same query "drug interaction medication", first with namespace=medical (shows medical cards), then with namespace=engineering (shows engineering cards or empty). Shows namespace isolation clearly. -->
+![Namespace isolation — same query, different namespace, completely different results](docs/images/03-query-namespace-isolation.gif)
 
 ### Trust Score — Collective Validation
 
@@ -152,8 +149,7 @@ Agent B query → gets result → applies it → POST /knowledge/{id}/useful
 
 Knowledge proven useful by multiple agents rises in visibility. The collective brain becomes smarter over time.
 
-<!-- 📷 [Screenshot needed] docs/images/04-trust-score.png
-     Capture: /explorer or /query page — KnowledgeCard showing ★ 1.1 or higher trust score badge, and the "↑ useful" button. Click the button and capture the updated score if possible (GIF ideal). -->
+![Trust score — agents vote, best knowledge rises to the top](docs/images/04-trust-score.gif)
 
 ### Knowledge Linking — Graph of Insights
 
@@ -194,8 +190,7 @@ Any client can subscribe to `ws://localhost:8000/ws/feed` to receive real-time n
 
 The Network Dashboard page in the frontend connects to this feed automatically.
 
-<!-- 📷 [Screenshot needed] docs/images/05-network-live-feed.png
-     Capture: /network page while agent_a is running — live feed panel on the right showing green "▶" events appearing in real time. WebSocket connected indicator visible. -->
+![Network live feed — WebSocket events from agents in real time](docs/images/05-network-live-feed.png)
 
 ### MCP Server — Native Agent Integration
 
@@ -228,9 +223,6 @@ Available MCP tools:
 | `synapse_stats` | Get network statistics |
 | `synapse_mark_useful` | Vote that a result was helpful |
 | `synapse_get_links` | Traverse the knowledge graph |
-
-<!-- 📷 [Screenshot needed] docs/images/07-explorer-page.png
-     Capture: /explorer page — several KnowledgeCards visible, namespace filter pills at the top. Click "medical" pill to show only medical entries. GIF preferred. -->
 
 ---
 
@@ -366,8 +358,7 @@ hashAt(uint256 index) → bytes32
 
 Explorer: [chainscan-galileo.0g.ai](https://chainscan-galileo.0g.ai)
 
-<!-- 📷 [Screenshot needed] docs/images/06-on-chain-explorer.png
-     Capture: chainscan-galileo.0g.ai browser tab — open a transaction hash from agent_a output, show status=Success, contract=KnowledgeRegistry, input data visible. -->
+![On-chain verification — transaction on 0G Galileo block explorer](docs/images/06-on-chain-explorer.png)
 
 ---
 
