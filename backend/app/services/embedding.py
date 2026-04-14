@@ -28,13 +28,13 @@ def _load_model():
     if _model is not None:
         return _model
     try:
-        from sentence_transformers import SentenceTransformer  # type: ignore
+        from fastembed import TextEmbedding  # type: ignore
         logger.info("Loading embedding model: %s", settings.embedding_model)
-        _model = SentenceTransformer(settings.embedding_model)
+        _model = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
         logger.info("Embedding model loaded.")
     except ImportError:
         logger.warning(
-            "sentence-transformers not installed — using mock embeddings."
+            "fastembed not installed — using mock embeddings."
         )
     return _model
 
@@ -46,7 +46,7 @@ def generate_embedding(text: str) -> list[float]:
     """
     model = _load_model()
     if model is not None:
-        vec = model.encode(text, normalize_embeddings=True)
+        vec = list(model.embed([text]))[0]
         return vec.tolist()
 
     return _mock_embedding(text)

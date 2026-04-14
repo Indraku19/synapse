@@ -4,8 +4,8 @@ pydantic==2.7.4
 pydantic-settings==2.3.4
 python-dotenv==1.0.1
 
-# Embeddings
-sentence-transformers==3.0.1
+# Embeddings — fastembed uses ONNX (no PyTorch), keeps image small
+fastembed==0.3.6
 
 # Vector store
 faiss-cpu>=1.12.0
