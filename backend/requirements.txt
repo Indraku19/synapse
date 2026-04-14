@@ -7,9 +7,8 @@ python-dotenv==1.0.1
 # Embeddings
 sentence-transformers==3.0.1
 
-# Vector store (choose one; both listed for flexibility)
+# Vector store
 faiss-cpu>=1.12.0
-chromadb==0.5.3
 
 # Hashing / crypto
 # (hashlib is stdlib — no extra dep needed)

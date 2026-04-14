@@ -1,0 +1,35 @@
+# Docs & media
+docs/
+*.gif
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.webm
+
+# Frontend
+frontend/
+frontend/node_modules/
+
+# Tests
+tests/
+
+# Contracts
+contracts/
+contracts-deploy/
+
+# Git
+.git/
+.gitignore
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Env files
+**/.env
+**/.env.local
