@@ -29,11 +29,12 @@ export default function RootLayout({
 
         <NavBar />
 
-        <main className="relative z-10 mx-auto max-w-6xl px-4 py-8">
-          {children}
-        </main>
+        <div className="relative z-10 flex flex-col min-h-[calc(100vh-57px)]">
+          <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-8">
+            {children}
+          </main>
 
-        <footer className="relative z-10 border-t border-steel mt-8">
+          <footer className="border-t border-steel mt-auto">
           <div className="mx-auto max-w-6xl px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex flex-col items-center sm:items-start gap-1">
               <span className="mono text-xs text-cyan tracking-widest uppercase">Synapse</span>
@@ -68,6 +69,7 @@ export default function RootLayout({
             </div>
           </div>
         </footer>
+        </div>
       </body>
     </html>
   );
