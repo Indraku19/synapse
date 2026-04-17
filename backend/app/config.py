@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     api_port: int = 8000
     log_level: str = "info"
 
-    allowed_origins: str = "http://localhost:3000"
+    allowed_origins: str = "http://localhost:3000,https://synapse02.vercel.app"
 
     vector_store: str = "faiss"  # "faiss" | "chroma"
     embedding_model: str = "all-MiniLM-L6-v2"
