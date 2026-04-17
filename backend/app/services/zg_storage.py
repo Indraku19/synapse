@@ -46,9 +46,13 @@ async def upload_knowledge(entry_dict: dict) -> str:
         logger.debug("[0G Storage] Mock CID generated: %s", cid)
         return cid
 
-    return await asyncio.get_event_loop().run_in_executor(
-        None, _upload_sync, payload
-    )
+    try:
+        return await asyncio.get_event_loop().run_in_executor(
+            None, _upload_sync, payload
+        )
+    except Exception as exc:
+        logger.warning("[0G Storage] Upload failed, falling back to mock CID: %s", exc)
+        return _mock_cid(payload.encode())
 
 
 def _upload_sync(payload: str) -> str:
