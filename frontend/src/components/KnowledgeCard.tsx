@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { clsx } from "clsx";
 import { markUseful } from "@/lib/api";
 import type { KnowledgeEntry, QueryResult } from "@/lib/types";
@@ -21,6 +21,14 @@ export function KnowledgeCard({ entry, showScore = false }: Props) {
   const [trustScore, setTrust] = useState(entry.trust_score ?? 1.0);
   const [marking, setMarking] = useState(false);
   const [marked, setMarked] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [isClamped, setIsClamped] = useState(false);
+  const bodyRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (el) setIsClamped(el.scrollHeight > el.clientHeight);
+  }, []);
 
   const handleMarkUseful = async () => {
     if (marking || marked) return;
@@ -52,7 +60,7 @@ export function KnowledgeCard({ entry, showScore = false }: Props) {
   const body = rawContent.slice(title.length).trim();
 
   return (
-    <article className="card-base card-hover p-5 flex flex-col gap-4 group">
+    <article className="card-base card-hover p-5 flex flex-col gap-3 group min-h-[260px]">
 
       {/* Score badge (query results) */}
       {showScore && (
@@ -69,53 +77,73 @@ export function KnowledgeCard({ entry, showScore = false }: Props) {
         </div>
       )}
 
-      {/* Title — prominent */}
-      <p className="font-medium text-text-primary leading-snug text-sm">{title}</p>
+      {/* Content area — grows to fill card */}
+      <div className="flex flex-col gap-3 flex-1">
 
-      {/* Body — muted, truncated */}
-      {body && (
-        <p className="text-xs text-text-muted leading-relaxed line-clamp-3">{body}</p>
-      )}
+        {/* Title — prominent */}
+        <p className="font-medium text-text-primary leading-snug text-sm">{title}</p>
 
-      {/* Trust score */}
-      {trustScore > 1.0 && (
-        <div className="flex items-center gap-1.5">
-          <span className="text-lime text-xs">★</span>
-          <span className="mono text-xs text-lime">{trustScore.toFixed(1)} trust</span>
-          {useCount > 0 && (
-            <span className="mono text-xs text-text-muted">· {useCount} votes</span>
-          )}
-        </div>
-      )}
+        {/* Body — truncated with expand toggle */}
+        {body && (
+          <div>
+            <p
+              ref={bodyRef}
+              className={clsx("text-xs text-text-muted leading-relaxed", !expanded && "line-clamp-3")}
+            >
+              {body}
+            </p>
+            {(isClamped || expanded) && (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="mt-1 mono text-xs text-cyan/70 hover:text-cyan transition-colors"
+              >
+                {expanded ? "collapse ↑" : "read more ↓"}
+              </button>
+            )}
+          </div>
+        )}
 
-      {/* References */}
-      {refs.length > 0 && (
-        <div className="flex items-center gap-1.5 mono text-xs text-text-muted">
-          <span className="text-steel">⊸</span>
-          <span>
-            {refs.length} linked entr{refs.length === 1 ? "y" : "ies"}
-          </span>
-        </div>
-      )}
+        {/* Trust score */}
+        {trustScore > 1.0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-lime text-xs">★</span>
+            <span className="mono text-xs text-lime">{trustScore.toFixed(1)} trust</span>
+            {useCount > 0 && (
+              <span className="mono text-xs text-text-muted">· {useCount} votes</span>
+            )}
+          </div>
+        )}
 
-      {/* Expiry */}
-      {expires && (
-        <div
-          className={clsx(
-            "mono text-xs flex items-center gap-1",
-            isExpiringSoon ? "text-yellow-400" : "text-text-muted"
-          )}
-        >
-          <span>⏱</span>
-          <span>
-            {isExpiringSoon ? "Expires soon — " : "Expires "}
-            {expires.toLocaleDateString()}
-          </span>
-        </div>
-      )}
+        {/* References */}
+        {refs.length > 0 && (
+          <div className="flex items-center gap-1.5 mono text-xs text-text-muted">
+            <span className="text-steel">⊸</span>
+            <span>
+              {refs.length} linked entr{refs.length === 1 ? "y" : "ies"}
+            </span>
+          </div>
+        )}
 
-      {/* Footer */}
-      <div className="flex items-center justify-between gap-3 pt-2 border-t border-steel/60">
+        {/* Expiry */}
+        {expires && (
+          <div
+            className={clsx(
+              "mono text-xs flex items-center gap-1",
+              isExpiringSoon ? "text-yellow-400" : "text-text-muted"
+            )}
+          >
+            <span>⏱</span>
+            <span>
+              {isExpiringSoon ? "Expires soon — " : "Expires "}
+              {expires.toLocaleDateString()}
+            </span>
+          </div>
+        )}
+
+      </div>
+
+      {/* Footer — always at bottom */}
+      <div className="flex items-center justify-between gap-3 pt-2 border-t border-steel/60 mt-auto">
         <div className="flex items-center gap-2 min-w-0">
           {entry.namespace && (
             <span className="mono text-xs px-1.5 py-0.5 rounded border border-cyan/30 text-cyan bg-cyan/5 shrink-0">
