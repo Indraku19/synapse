@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     vector_store: str = "faiss"  # "faiss" | "chroma"
     embedding_model: str = "all-MiniLM-L6-v2"
 
+    # Persistence — directory where snapshots are written.
+    # On Railway: mount a persistent volume at this path so data survives redeploys.
+    data_dir: str = "/app/data"
+
     # 0G Storage (Phase 2)
     use_zg_storage: bool = False
     zg_storage_endpoint: str = "https://indexer-storage-testnet-turbo.0g.ai"

@@ -25,7 +25,7 @@ app = FastAPI(
         "Decentralized memory network for AI agents. "
         "Enables agents to store, retrieve, and verify knowledge."
     ),
-    version="0.2.0",
+    version="0.3.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -49,7 +49,7 @@ async def health():
     """Liveness check."""
     return {
         "status":      "ok",
-        "version":     "0.2.0",
+        "version":     "0.3.0",
         "0g_storage":  settings.use_0g_storage,
         "0g_chain":    settings.use_0g_chain,
         "ws_clients":  ws_manager.connection_count,
@@ -80,10 +80,15 @@ async def websocket_feed(ws: WebSocket):
 
 @app.on_event("startup")
 async def on_startup():
-    logger.info("Synapse API v0.2.0 starting up.")
+    logger.info("Synapse API v0.3.0 starting up.")
     logger.info(
         "0G Storage: %s | 0G Chain: %s",
         "enabled" if settings.use_0g_storage else "local mock",
         "enabled" if settings.use_0g_chain  else "local mock",
     )
     logger.info("WebSocket live feed: ws://0.0.0.0:%s/ws/feed", settings.api_port)
+    # Load persisted state from disk (survives Railway redeploys when volume is mounted)
+    from app.services.vector_store import get_store
+    from app.routers.agents import load_agents_on_startup
+    get_store()               # triggers snapshot load
+    load_agents_on_startup()  # loads agents.json

@@ -118,3 +118,12 @@ class AgentRecord(BaseModel):
     created_at: str   = Field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+
+
+class AgentReputation(BaseModel):
+    """Reputation derived from the agent's contribution to the knowledge network."""
+    agent_id: str
+    total_stores: int           = 0
+    total_useful_received: int  = 0
+    # 1.0 base + bonus capped at 4.0: scales with ratio of useful votes per store
+    reputation_score: float     = 1.0

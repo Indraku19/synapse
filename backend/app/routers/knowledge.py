@@ -157,6 +157,102 @@ async def get_knowledge_links(knowledge_id: str):
     }
 
 
+@router.get("/{knowledge_id}/graph")
+async def get_knowledge_graph(
+    knowledge_id: str,
+    max_hops: int = 3,
+    direction: str = "both",
+):
+    """
+    Multi-hop graph traversal from a knowledge entry.
+
+    Traverses the reference graph up to `max_hops` levels using BFS and returns
+    all reachable nodes with their hop distance and all directed edges.
+
+    Parameters:
+      max_hops  — maximum traversal depth (1–10, default 3)
+      direction — "forward" (what this builds on) |
+                  "backward" (what builds on this) |
+                  "both" (default, bidirectional)
+
+    Example chains:
+      Entry A: "race condition in nonce manager"
+        └── Entry B: "fix: asyncio.Lock per wallet"  references=[A]
+              └── Entry C: "optimisation: per-account lock pool"  references=[B]
+
+      GET /knowledge/A/graph?max_hops=2  → returns A, B, C with edges A→B, B→C
+    """
+    if direction not in ("forward", "backward", "both"):
+        raise HTTPException(status_code=422, detail="direction must be 'forward', 'backward', or 'both'")
+    max_hops = max(1, min(10, max_hops))
+
+    store = get_store()
+    if store.get_by_id(knowledge_id) is None:
+        raise HTTPException(status_code=404, detail="Knowledge entry not found")
+
+    nodes_raw, edges_raw = store.traverse_graph(
+        root_id=knowledge_id,
+        max_hops=max_hops,
+        direction=direction,
+    )
+
+    nodes = [
+        {
+            "knowledge_id": e.knowledge_id,
+            "content":      e.content[:120],
+            "agent_id":     e.agent_id,
+            "namespace":    e.namespace,
+            "trust_score":  e.trust_score,
+            "timestamp":    e.timestamp,
+            "hop_distance": hop,
+            "is_root":      e.knowledge_id == knowledge_id,
+        }
+        for e, hop in nodes_raw
+    ]
+    edges = [{"from": f, "to": t} for f, t in edges_raw]
+
+    max_depth = max((hop for _, hop in nodes_raw), default=0)
+
+    return {
+        "root_id":          knowledge_id,
+        "nodes":            nodes,
+        "edges":            edges,
+        "total_nodes":      len(nodes),
+        "total_edges":      len(edges),
+        "max_depth_reached": max_depth,
+        "direction":        direction,
+    }
+
+
+@router.get("/graph")
+async def get_full_graph():
+    """
+    Return the complete knowledge graph — all entries as nodes and all
+    reference relationships as directed edges.
+
+    Suitable for rendering a network visualisation of the entire knowledge base.
+    """
+    store = get_store()
+    entries, edges = store.full_graph()
+    nodes = [
+        {
+            "knowledge_id": e.knowledge_id,
+            "content":      e.content[:120],
+            "agent_id":     e.agent_id,
+            "namespace":    e.namespace,
+            "trust_score":  e.trust_score,
+            "timestamp":    e.timestamp,
+        }
+        for e in entries
+    ]
+    return {
+        "nodes":       nodes,
+        "edges":       [{"from": f, "to": t} for f, t in edges],
+        "total_nodes": len(nodes),
+        "total_edges": len(edges),
+    }
+
+
 @router.get("/stats")
 async def get_stats():
     """
