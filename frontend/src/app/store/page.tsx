@@ -28,7 +28,7 @@ function Section({
         </span>
         <div className="flex flex-col gap-0.5">
           <h2 className="font-semibold tracking-tight">{title}</h2>
-          <p className="mono text-xs text-text-muted">{subtitle}</p>
+          <p className="mono text-xs text-gray-400">{subtitle}</p>
         </div>
       </div>
       <div className="flex flex-col gap-5 pl-10">{children}</div>
@@ -308,7 +308,7 @@ export default function StorePage() {
           <h1 className="text-3xl font-semibold tracking-tight">
             Store Knowledge
           </h1>
-          <p className="text-text-muted text-sm leading-relaxed max-w-lg">
+          <p className="text-gray-300 text-sm leading-relaxed max-w-lg">
             Submit knowledge to the Synapse network. It will be embedded, stored
             in 0G Storage, and verified on 0G Chain.
           </p>

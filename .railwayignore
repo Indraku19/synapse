@@ -1,0 +1,12 @@
+backend/.venv
+frontend/node_modules
+frontend/.next
+contracts-deploy/node_modules
+contracts-deploy/artifacts
+contracts-deploy/cache
+**/__pycache__
+**/*.pyc
+**/.DS_Store
+.git
+docs/images
+testsprite_tests

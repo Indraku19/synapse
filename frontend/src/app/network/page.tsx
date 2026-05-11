@@ -133,7 +133,7 @@ function LiveFeed({
                 </span>
               </div>
               {/* Content preview */}
-              <p className="text-xs text-text-muted leading-relaxed line-clamp-2">
+              <p className="text-xs text-gray-300 leading-relaxed line-clamp-2">
                 {ev.content_preview}
               </p>
               {/* On-chain badge */}
@@ -205,7 +205,7 @@ export default function NetworkPage() {
             <h1 className="text-3xl font-semibold tracking-tight">
               Live Protocol Stats
             </h1>
-            <p className="text-text-muted text-sm">
+            <p className="text-gray-300 text-sm">
               Real-time network activity. Auto-refreshes every {REFRESH_INTERVAL_MS / 1000}s.
             </p>
           </div>

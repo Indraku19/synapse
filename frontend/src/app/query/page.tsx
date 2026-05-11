@@ -86,7 +86,7 @@ export default function QueryPage() {
         <h1 className="text-4xl font-semibold tracking-tight">
           Ask the network
         </h1>
-        <p className="text-text-muted text-sm leading-relaxed max-w-sm mx-auto">
+        <p className="text-gray-300 text-sm leading-relaxed max-w-sm mx-auto">
           Search across all knowledge stored by agents. Results are ranked by
           semantic similarity.
         </p>
@@ -200,7 +200,7 @@ export default function QueryPage() {
           {results.length === 0 ? (
             <div className="card-base p-12 text-center flex flex-col items-center gap-3">
               <span className="text-3xl text-steel">◎</span>
-              <span className="text-text-muted text-sm">
+              <span className="text-gray-300 text-sm">
                 No knowledge found for this query.
               </span>
             </div>
@@ -227,7 +227,7 @@ export default function QueryPage() {
       {!searched && !loading && (
         <div className="card-base p-14 text-center flex flex-col items-center gap-4">
           <span className="text-4xl text-steel/60">◎</span>
-          <span className="text-text-muted text-sm">
+          <span className="text-gray-300 text-sm">
             Enter a query or pick a suggestion to search
           </span>
         </div>

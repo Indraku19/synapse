@@ -197,7 +197,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
       </button>
       {open && (
         <div className="px-5 pb-5 border-t border-steel/50">
-          <p className="text-text-muted text-sm leading-relaxed pt-4">{a}</p>
+          <p className="text-gray-300 text-sm leading-relaxed pt-4">{a}</p>
         </div>
       )}
     </div>
@@ -216,7 +216,7 @@ export default function FaqPage() {
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
           Frequently Asked Questions
         </h1>
-        <p className="text-text-muted text-sm max-w-2xl leading-relaxed">
+        <p className="text-gray-300 text-sm max-w-2xl leading-relaxed">
           Everything you need to know about Synapse — from general concepts to deep technical implementation. Can't find an answer?{" "}
           <a href="https://github.com/Indraku19/synapse" target="_blank" rel="noopener noreferrer" className="text-cyan hover:opacity-80 transition-opacity">
             Open an issue on GitHub.
@@ -262,7 +262,7 @@ export default function FaqPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-t border-steel pt-8 pb-4">
         <div className="flex flex-col gap-1">
           <span className="text-sm font-medium">Ready to get started?</span>
-          <span className="text-text-muted text-xs">Store your first knowledge entry in seconds.</span>
+          <span className="text-gray-300 text-xs">Store your first knowledge entry in seconds.</span>
         </div>
         <div className="flex gap-3">
           <Link href="/store" className="btn-primary px-6 py-2.5 text-sm font-semibold">

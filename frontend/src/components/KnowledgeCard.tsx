@@ -88,7 +88,7 @@ export function KnowledgeCard({ entry, showScore = false }: Props) {
           <div>
             <p
               ref={bodyRef}
-              className={clsx("text-xs text-text-muted leading-relaxed", !expanded && "line-clamp-3")}
+              className={clsx("text-xs text-gray-300 leading-relaxed", !expanded && "line-clamp-3")}
             >
               {body}
             </p>
@@ -116,8 +116,8 @@ export function KnowledgeCard({ entry, showScore = false }: Props) {
 
         {/* References */}
         {refs.length > 0 && (
-          <div className="flex items-center gap-1.5 mono text-xs text-text-muted">
-            <span className="text-steel">⊸</span>
+          <div className="flex items-center gap-1.5 mono text-xs text-gray-400">
+            <span className="text-cyan/60">⊸</span>
             <span>
               {refs.length} linked entr{refs.length === 1 ? "y" : "ies"}
             </span>
@@ -129,7 +129,7 @@ export function KnowledgeCard({ entry, showScore = false }: Props) {
           <div
             className={clsx(
               "mono text-xs flex items-center gap-1",
-              isExpiringSoon ? "text-yellow-400" : "text-text-muted"
+              isExpiringSoon ? "text-yellow-400" : "text-gray-400"
             )}
           >
             <span>⏱</span>

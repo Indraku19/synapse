@@ -262,7 +262,7 @@ print(f"{g['total_nodes']} nodes, {g['total_edges']} edges")
 ```python
 from synapse_sdk import SynapseClient
 
-with SynapseClient("https://synapse-production-c1ae.up.railway.app") as client:
+with SynapseClient("https://synapse-production-8774.up.railway.app") as client:
     # Store
     result = client.store(
         content="asyncio.Lock() per-wallet fixes the nonce race condition.",
@@ -586,6 +586,18 @@ synapse/
         ├── test_knowledge_api.py  # Integration: all API endpoints
         └── test_zg_storage.py     # 0G storage mock tests
 ```
+
+---
+
+## Competitive Landscape
+
+After surveying 52 projects across AI agent memory, multi-agent frameworks, decentralized AI, vector databases, and on-chain verification — no single project combines all of Synapse's capabilities simultaneously.
+
+**Interactive comparison table → [synapse02.vercel.app/compare](https://synapse02.vercel.app/compare)**
+
+The comparison covers: Mem0, Zep/Graphiti, Cognee, Graphlit, CrewAI, claude-code-flow, Bittensor, Autonolas, Pinecone, and more — across 21 features including semantic search, knowledge graph, namespace isolation, trust scoring, on-chain verification, decentralized storage, MCP integration, and agent reputation.
+
+> **TL;DR:** `Synapse = Cognee + 0G Chain verification + trust scoring + agent reputation`
 
 ---
 

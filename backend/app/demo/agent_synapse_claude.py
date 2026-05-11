@@ -7,7 +7,7 @@ Claude as context. Without Synapse, it cannot answer domain questions.
 
 Usage:
     export ANTHROPIC_API_KEY=your_key
-    export SYNAPSE_URL=https://synapse-production-c1ae.up.railway.app  # or localhost:8000
+    export SYNAPSE_URL=https://synapse-production-8774.up.railway.app  # or localhost:8000
 
     python -m app.demo.agent_synapse_claude
 

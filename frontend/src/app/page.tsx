@@ -293,7 +293,7 @@ function HeroVisual() {
 function Cell({ val }: { val: boolean | string }) {
   if (val === true) return <span className="text-lime glow-text-lime text-base">✓</span>;
   if (val === false) return <span className="text-steel text-base">✗</span>;
-  return <span className="mono text-xs text-text-muted">{val}</span>;
+  return <span className="mono text-xs text-gray-400">{val}</span>;
 }
 
 // ─── SectionLabel ─────────────────────────────────────────────────────────────
@@ -328,7 +328,7 @@ export default function HomePage() {
             <span className="text-gradient-cyan">Every agent</span><br />
             learns.
           </h1>
-          <p className="text-text-muted text-base sm:text-lg max-w-md leading-relaxed">
+          <p className="text-gray-300 text-base sm:text-lg max-w-md leading-relaxed">
             Synapse is the collective intelligence layer for AI agents — the first shared runtime memory where what one agent discovers, every agent can use. Built on 0G Network.
           </p>
           <div className="flex flex-wrap gap-3">
@@ -374,7 +374,7 @@ export default function HomePage() {
           <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
             AI agents are brilliant —<br className="hidden sm:block" /> but they forget everything
           </h2>
-          <p className="text-text-muted text-sm max-w-2xl leading-relaxed">
+          <p className="text-gray-300 text-sm max-w-2xl leading-relaxed">
             Every AI agent today operates as an isolated silo. No persistent memory. No shared knowledge. No way to build on each other's work. These are not edge cases — they are fundamental limitations of the current architecture.
           </p>
         </div>
@@ -386,7 +386,7 @@ export default function HomePage() {
               </div>
               <div className="flex flex-col gap-2">
                 <h3 className="font-semibold text-sm leading-snug">{title}</h3>
-                <p className="text-text-muted text-xs leading-relaxed">{body}</p>
+                <p className="text-gray-300 text-xs leading-relaxed">{body}</p>
               </div>
             </div>
           ))}
@@ -436,7 +436,7 @@ export default function HomePage() {
               <span className={`text-2xl ${color}`}>{icon}</span>
               <div className="flex flex-col gap-2">
                 <h3 className="font-semibold text-sm leading-snug">{title}</h3>
-                <p className="text-text-muted text-xs leading-relaxed">{body}</p>
+                <p className="text-gray-300 text-xs leading-relaxed">{body}</p>
               </div>
             </div>
           ))}
@@ -455,7 +455,7 @@ export default function HomePage() {
               <span className={`text-2xl ${color}`}>{icon}</span>
               <div className="flex flex-col gap-2">
                 <h3 className="font-semibold text-sm leading-snug">{title}</h3>
-                <p className="text-text-muted text-xs leading-relaxed">{body}</p>
+                <p className="text-gray-300 text-xs leading-relaxed">{body}</p>
               </div>
             </div>
           ))}
@@ -483,7 +483,7 @@ export default function HomePage() {
             <tbody>
               {COMPARISON.map(({ feature, webSearch, trainingData, synapse }, i) => (
                 <tr key={feature} className={`border-b border-steel/50 ${i % 2 === 0 ? "" : "bg-obsidian/40"}`}>
-                  <td className="px-4 py-3 text-xs text-text-muted">{feature}</td>
+                  <td className="px-4 py-3 text-xs text-gray-300">{feature}</td>
                   <td className="px-4 py-3 text-center"><Cell val={webSearch} /></td>
                   <td className="px-4 py-3 text-center"><Cell val={trainingData} /></td>
                   <td className="px-4 py-3 text-center"><Cell val={synapse} /></td>
@@ -542,7 +542,7 @@ export default function HomePage() {
               </button>
               {openFaq === i && (
                 <div className="px-5 pb-4 border-t border-steel/50">
-                  <p className="text-text-muted text-sm leading-relaxed pt-3">{a}</p>
+                  <p className="text-gray-300 text-sm leading-relaxed pt-3">{a}</p>
                 </div>
               )}
             </div>
@@ -559,7 +559,7 @@ export default function HomePage() {
             <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
               The only blockchain designed for AI infrastructure
             </h2>
-            <p className="text-text-muted text-sm leading-relaxed">
+            <p className="text-gray-300 text-sm leading-relaxed">
               0G provides native decentralized storage (0G Storage) and a high-throughput EVM chain (0G Chain) — everything Synapse needs. Ethereum is too expensive. Solana has no storage layer. 0G is purpose-built.
             </p>
             <div className="flex flex-wrap gap-4 pt-2">
@@ -594,7 +594,7 @@ export default function HomePage() {
         <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
           Ready to give your agents shared memory?
         </h2>
-        <p className="text-text-muted text-sm max-w-sm leading-relaxed">
+        <p className="text-gray-300 text-sm max-w-sm leading-relaxed">
           Start storing knowledge in seconds. REST API, MCP server, or web dashboard — your choice.
         </p>
         <div className="flex flex-wrap gap-3 justify-center">

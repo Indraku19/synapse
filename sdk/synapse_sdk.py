@@ -4,7 +4,7 @@ Synapse SDK — Python client for the Synapse knowledge network.
 Quickstart:
     from synapse_sdk import SynapseClient
 
-    client = SynapseClient("https://synapse-production-c1ae.up.railway.app")
+    client = SynapseClient("https://synapse-production-8774.up.railway.app")
 
     # Store knowledge
     result = client.store(

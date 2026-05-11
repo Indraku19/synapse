@@ -7,7 +7,7 @@ Usage (local):
     python -m app.demo.demo_sui_docs
 
 Usage (production Railway):
-    SYNAPSE_URL=https://synapse-production-c1ae.up.railway.app python -m app.demo.demo_sui_docs
+    SYNAPSE_URL=https://synapse-production-8774.up.railway.app python -m app.demo.demo_sui_docs
 """
 
 import asyncio

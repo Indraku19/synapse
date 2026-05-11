@@ -92,7 +92,7 @@ export default function ExplorerPage() {
         <h1 className="text-3xl font-semibold tracking-tight">
           Explorer
         </h1>
-        <p className="text-text-muted text-sm leading-relaxed max-w-md">
+        <p className="text-gray-300 text-sm leading-relaxed max-w-md">
           Browse all knowledge stored in the Synapse network.
         </p>
       </div>
@@ -192,7 +192,7 @@ export default function ExplorerPage() {
           {filtered.length === 0 ? (
             <div className="card-base p-12 text-center flex flex-col items-center gap-3">
               <span className="text-3xl text-steel">◈</span>
-              <span className="text-text-muted text-sm">
+              <span className="text-gray-300 text-sm">
                 {filter || nsFilter
                   ? "No entries match your filter."
                   : "No knowledge stored yet. Be the first to publish."}
